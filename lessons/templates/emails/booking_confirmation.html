@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ready Aim Learn Booking Confirmation</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f4f4f7;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    .header {
+      background-color: #2E86C1;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .content {
+      padding: 20px;
+      color: #333333;
+    }
+    .content h2 {
+      color: #E74C3C;
+      margin-top: 0;
+    }
+    .details {
+      margin: 20px 0;
+      padding: 15px;
+      background-color: #f9f9f9;
+      border-left: 4px solid #2E86C1;
+    }
+    .details p {
+      margin: 5px 0;
+      font-size: 16px;
+    }
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: #888888;
+      padding: 10px 0;
+      border-top: 1px solid #ddd;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #2E86C1;
+      color: white;
+      padding: 12px 25px;
+      text-decoration: none;
+      border-radius: 5px;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    @media screen and (max-width: 640px) {
+      .container { width: 90%; padding: 10px; }
+      .header h1 { font-size: 20px; }
+      .details p { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎯 Ready Aim Learn</h1>
+    </div>
+
+    <div class="content">
+      <h2>Hello {{ name }}!</h2>
+      <p>We’re excited to confirm your shooting lesson booking! Get ready for an amazing experience. 🏹</p>
+
+      <div class="details">
+        <p><strong>Date & Time:</strong> {{ date_time }}</p>
+        <p><strong>Instructor:</strong> {{ instructor_name }}</p>
+        <p><strong>Location:</strong> {{ location }}</p>
+      </div>
+
+      <p>Thank you for choosing Ready Aim Learn. We’ll make sure you have a fun and safe shooting session.</p>
+
+      <a href="/" class="btn">View More Lessons</a>
+    </div>
+
+    <div class="footer">
+      <p>If you have any questions, simply reply to this email.</p>
+      <p>© 2025 Ready Aim Learn. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
