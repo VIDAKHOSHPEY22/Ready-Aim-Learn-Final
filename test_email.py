@@ -1,39 +1,130 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Working HTML Email Test Script
+"""
+
 import os
-import django
-from django.core.mail import send_mail, EmailMultiAlternatives
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import smtplib
+import ssl
+from datetime import datetime
 from dotenv import load_dotenv
-from pathlib import Path
 
-# Load environment variables from .env
-BASE_DIR = Path(__file__).resolve().parent
-load_dotenv(BASE_DIR / ".env")
+# Load environment variables
+load_dotenv()
 
-# Set Django settings
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ready_aim_learn.settings")
-django.setup()
+# Email Configuration
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_USER)
+RECIPIENTS = ["vviiddaa2@gmail.com", "luisdavid313@gmail.com"]
 
-# Ensure your email settings are correct in settings.py or override them here
-from django.conf import settings
-if not settings.configured:
-    settings.configure(
-        EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend',
-        EMAIL_HOST=os.getenv("EMAIL_HOST", "smtp.gmail.com"),
-        EMAIL_PORT=int(os.getenv("EMAIL_PORT", 587)),
-        EMAIL_USE_TLS=True,
-        EMAIL_HOST_USER=os.getenv("EMAIL_HOST_USER"),
-        EMAIL_HOST_PASSWORD=os.getenv("EMAIL_HOST_PASSWORD"),  # Gmail App Password
-        DEFAULT_FROM_EMAIL=os.getenv("EMAIL_HOST_USER"),
-    )
+# Simple HTML Template with inline styles (no CSS variables)
+HTML_TEMPLATE = """
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background-color: #d32f2f; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0;">
+        <h1 style="margin: 0;">🔫 Shooting Lesson Confirmation</h1>
+    </div>
+    
+    <div style="padding: 20px; background-color: #fff; border-left: 1px solid #eee; border-right: 1px solid #eee;">
+        <p>Hello <strong>VIP Member</strong>,</p>
+        
+        <p>Your shooting lesson has been confirmed with these details:</p>
+        
+        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #d32f2f;">
+            <h3 style="margin-top: 0;">Lesson Details</h3>
+            <p><strong>Date & Time:</strong> {current_datetime}</p>
+            <p><strong>Instructor:</strong> Luis David</p>
+            <p><strong>Location:</strong> Premium Shooting Range</p>
+            <p><strong>Reference:</strong> SR-{ref_number}</p>
+        </div>
+        
+        <center>
+            <a href="https://example.com/booking?ref=SR-{ref_number}" 
+               style="display: inline-block; padding: 10px 20px; background-color: #d32f2f; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0;">
+                View Your Booking
+            </a>
+        </center>
+        
+        <p>Please arrive 15 minutes early for safety briefing.</p>
+    </div>
+    
+    <div style="padding: 20px; text-align: center; font-size: 12px; color: #777; background-color: #f8f9fa; border-radius: 0 0 5px 5px;">
+        <p>© {current_year} Ready Aim Learn. All rights reserved.</p>
+    </div>
+</body>
+</html>
+"""
 
-# Send test email
-try:
-    send_mail(
-        "Test Email",
-        "This is a test message from Django.",
-        os.getenv("EMAIL_HOST_USER"),
-        ["vviiddaa2@gmail.com"],  # Replace
-        fail_silently=False,
-    )
-    print("Email sent successfully!")
-except Exception as e:
-    print("Error sending email:", e)
+def send_email():
+    try:
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = "🔫 Your Shooting Lesson Confirmation"
+        msg['From'] = DEFAULT_FROM_EMAIL
+        msg['To'] = ", ".join(RECIPIENTS)
+        
+        # Generate reference number
+        ref_number = datetime.now().strftime("%Y%m%d%H%M")
+        current_datetime = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
+        current_year = datetime.now().year
+        
+        # Create email content
+        text_content = f"""Shooting Lesson Confirmation
+        -------------------------------
+        Date/Time: {current_datetime}
+        Instructor: Luis David
+        Location: Premium Shooting Range
+        Reference: SR-{ref_number}
+        
+        Please arrive 15 minutes early.
+        """
+        
+        html_content = HTML_TEMPLATE.format(
+            current_datetime=current_datetime,
+            current_year=current_year,
+            ref_number=ref_number
+        )
+        
+        # Attach both text and HTML versions
+        part1 = MIMEText(text_content, 'plain')
+        part2 = MIMEText(html_content, 'html')
+        msg.attach(part1)
+        msg.attach(part2)
+        
+        # Send email
+        context = ssl.create_default_context()
+        with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT) as server:
+            server.ehlo()
+            server.starttls(context=context)
+            server.ehlo()
+            server.login(EMAIL_USER, EMAIL_PASSWORD)
+            server.sendmail(DEFAULT_FROM_EMAIL, RECIPIENTS, msg.as_string())
+        
+        print("✅ Email successfully sent to:")
+        for recipient in RECIPIENTS:
+            print(f"  → {recipient}")
+            
+    except Exception as e:
+        print(f"❌ Error sending email: {str(e)}")
+
+if __name__ == "__main__":
+    print("\n" + "="*50)
+    print("🔫 Shooting Range Email Test")
+    print("="*50)
+    
+    # Verify configuration
+    print(f"SMTP Server: {EMAIL_HOST}:{EMAIL_PORT}")
+    print(f"From: {DEFAULT_FROM_EMAIL}")
+    print(f"To: {', '.join(RECIPIENTS)}")
+    
+    send_email()
+    
+    print("\n" + "="*50)
+    print("Test completed")

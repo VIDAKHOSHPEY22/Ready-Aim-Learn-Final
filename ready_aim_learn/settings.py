@@ -129,8 +129,8 @@ ACCOUNT_LOGOUT_REDIRECT_URL = 'home'
 ACCOUNT_SIGNUP_REDIRECT_URL = 'home'
 
 # Allauth settings
-ACCOUNT_LOGIN_METHODS = {'username', 'email'}
-ACCOUNT_SIGNUP_FIELDS = ['username', 'email', 'password1', 'password2']
+ACCOUNT_LOGIN_METHODS = ["username", "email"]  # ← لیست
+ACCOUNT_SIGNUP_FIELDS = None
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 SOCIALACCOUNT_LOGIN_ON_GET = True  # Skip confirmation page for Google OAuth
 
@@ -164,65 +164,20 @@ PAYPAL_CANCEL_URL = os.getenv("PAYPAL_CANCEL_URL", "http://localhost:8000/paymen
 # PAYPAL_RETURN_URL=https://yourdomain.com/payment/success/
 # PAYPAL_CANCEL_URL=https://yourdomain.com/payment/cancel/
 
-
+# settings.py
 import os
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
+from dotenv import load_dotenv
 
-# ==============================================
-# Email configuration (Gmail App Password recommended)
-# ==============================================
+load_dotenv()
+
+# Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')  # your Gmail
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')  # Gmail App Password
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
-
-# Optional: Ensure Django knows these settings if not using settings.py
-from django.conf import settings
-if not settings.configured:
-    settings.configure(
-        EMAIL_BACKEND=EMAIL_BACKEND,
-        EMAIL_HOST=EMAIL_HOST,
-        EMAIL_PORT=EMAIL_PORT,
-        EMAIL_USE_TLS=EMAIL_USE_TLS,
-        EMAIL_HOST_USER=EMAIL_HOST_USER,
-        EMAIL_HOST_PASSWORD=EMAIL_HOST_PASSWORD,
-        DEFAULT_FROM_EMAIL=DEFAULT_FROM_EMAIL,
-    )
-
-# ==============================================
-# Multi-recipient HTML Email Function
-# ==============================================
-def send_booking_email(customer_email, customer_name, lesson_date, instructor_name="Luis David", location="Shooting Range"):
-    recipients = ["vviiddaa2@gmail.com", "luisdavid313@gmail.com", customer_email]
-    subject = "🎯 Ready Aim Learn: Shooting Lesson Booking Confirmation"
-    
-    # HTML content
-    context = {
-        "name": customer_name,
-        "date_time": lesson_date,
-        "instructor_name": instructor_name,
-        "location": location,
-    }
-    html_content = render_to_string("emails/booking_confirmation.html", context)
-    
-    # Plain text content
-    text_content = f"Hello {customer_name},\nYour shooting lesson has been booked for {lesson_date} with {instructor_name} at {location}."
-    
-    # Create email
-    msg = EmailMultiAlternatives(subject, text_content, DEFAULT_FROM_EMAIL, recipients)
-    msg.attach_alternative(html_content, "text/html")
-    
-    # Send email
-    try:
-        msg.send(fail_silently=False)
-        print("Email sent successfully!")
-    except Exception as e:
-        print("Error sending email:", e)
-
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 # ==============================================
 # Security for production

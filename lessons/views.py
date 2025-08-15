@@ -4,7 +4,7 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from django.utils import timezone
 from django.urls import path
@@ -27,10 +27,8 @@ from .forms import (
     AvailabilityCheckForm
 )
 
-# Initialize logger
 logger = logging.getLogger(__name__)
 
-# Constants
 TIME_SLOTS = [
     ('09:00:00', '9:00 AM'),
     ('10:30:00', '10:30 AM'),
@@ -42,7 +40,6 @@ TIME_SLOTS = [
 ]
 
 def parse_date(date_input):
-    """Convert string or date to date object"""
     if isinstance(date_input, date):
         return date_input
     try:
@@ -52,7 +49,6 @@ def parse_date(date_input):
         raise ValueError("Invalid date format")
 
 def parse_time(time_input):
-    """Convert string or time to time object"""
     if isinstance(time_input, dt_time):
         return time_input
     try:
@@ -62,7 +58,6 @@ def parse_time(time_input):
         raise ValueError("Invalid time format")
 
 def get_active_resources():
-    """Helper function to get all active resources"""
     return {
         'packages': TrainingPackage.objects.filter(is_active=True),
         'weapons': Weapon.objects.filter(is_active=True),
@@ -71,7 +66,6 @@ def get_active_resources():
     }
 
 def home(request):
-    """Homepage view with featured packages and testimonials"""
     context = {
         'featured_packages': TrainingPackage.objects.filter(is_active=True).order_by('?')[:3],
         'testimonials': Testimonial.objects.filter(is_approved=True).order_by('-created_at')[:4],
@@ -79,7 +73,6 @@ def home(request):
     return render(request, 'lessons/home.html', context)
 
 def packages(request):
-    """View for listing all training packages with filtering"""
     packages = TrainingPackage.objects.filter(is_active=True)
     filter_form = PackageFilterForm(request.GET)
     
@@ -96,7 +89,6 @@ def packages(request):
     })
 
 def apply_package_filters(packages, cleaned_data):
-    """Apply filters to packages queryset"""
     duration = cleaned_data.get('duration')
     price_range = cleaned_data.get('price_range')
     sort_by = cleaned_data.get('sort_by')
@@ -117,7 +109,6 @@ def apply_package_filters(packages, cleaned_data):
     return packages
 
 def package_detail(request, pk):
-    """Detailed view for a single training package"""
     package = get_object_or_404(TrainingPackage, pk=pk, is_active=True)
     return render(request, 'lessons/package_detail.html', {
         'package': package,
@@ -127,7 +118,6 @@ def package_detail(request, pk):
     })
 
 def quick_booking(request):
-    """Simplified booking flow that redirects to main booking with package preselected"""
     if request.method == 'POST':
         form = QuickBookingForm(request.POST)
         if form.is_valid():
@@ -140,7 +130,6 @@ def quick_booking(request):
 
 @login_required
 def booking(request, package_id=None):
-    """Main booking view that handles both direct access and package-specific booking"""
     resources = get_active_resources()
     min_date = (timezone.now() + timezone.timedelta(days=1)).date()
     quick_booking_date = request.session.pop('quick_booking_date', None)
@@ -150,36 +139,21 @@ def booking(request, package_id=None):
     
     return render_booking_form(request, package_id, quick_booking_date, resources, min_date)
 
-def handle_booking_post(request, resources: dict, min_date: date):
-    """
-    Process booking form submission with comprehensive validation
-    
-    Args:
-        request: HttpRequest object
-        resources: Dictionary of active resources (packages, weapons, etc.)
-        min_date: Minimum allowed booking date
-        
-    Returns:
-        HttpResponse: Redirect on success or form with errors
-    """
+def handle_booking_post(request, resources, min_date):
     form = BookingForm(request.POST, user=request.user)
     
-    # Handle invalid form
     if not form.is_valid():
         return handle_invalid_form(request, form, resources, min_date)
     
     try:
-        # Prepare booking object
         booking = form.save(commit=False)
         booking.user = request.user
         booking.duration = booking.duration or booking.package.duration
         
-        # Validate availability
         if not validate_booking_availability(booking):
             messages.error(request, "The selected time slot is no longer available.")
             return render_booking_form_with_context(request, form, resources, min_date)
         
-        # Process confirmation
         return process_booking_confirmation(request, booking)
         
     except Exception as e:
@@ -187,22 +161,11 @@ def handle_booking_post(request, resources: dict, min_date: date):
         messages.error(request, "A system error occurred. Please try again later.")
         return render_booking_form_with_context(request, form, resources, min_date)
 
-def validate_booking_availability(booking: Booking) -> bool:
-    """
-    Validate instructor availability for the booking
-    
-    Args:
-        booking: Booking object to validate
-        
-    Returns:
-        bool: True if available, False if not
-    """
+def validate_booking_availability(booking):
     try:
-        # Check instructor availability
         if not is_instructor_available(booking.instructor, booking.date, booking.time):
             return False
         
-        # Check for existing bookings
         conflicting_bookings = Booking.objects.filter(
             date=booking.date,
             time=booking.time,
@@ -216,23 +179,12 @@ def validate_booking_availability(booking: Booking) -> bool:
         logger.error(f"Availability validation failed: {str(e)}", exc_info=True)
         return False
 
-def process_booking_confirmation(request, booking: Booking):
-    """
-    Handle booking confirmation based on payment method
-    
-    Args:
-        request: HttpRequest object
-        booking: Booking object to confirm
-        
-    Returns:
-        HttpResponse: Redirect to appropriate next step
-    """
+def process_booking_confirmation(request, booking):
     booking.status = 'pending'
     
     if booking.payment_method == 'paypal':
         return handle_paypal_payment(request, booking)
     
-    # Handle non-PayPal payments
     try:
         booking.save()
         send_booking_confirmation(booking, request.user)
@@ -244,17 +196,7 @@ def process_booking_confirmation(request, booking: Booking):
         messages.error(request, "Failed to save your booking. Please contact support.")
         return redirect('booking')
 
-def handle_paypal_payment(request, booking: Booking):
-    """
-    Prepare PayPal payment process by storing booking in session
-    
-    Args:
-        request: HttpRequest object
-        booking: Booking object to process
-        
-    Returns:
-        HttpResponseRedirect: To PayPal payment page
-    """
+def handle_paypal_payment(request, booking):
     try:
         request.session['pending_booking'] = {
             'package_id': booking.package.id,
@@ -274,23 +216,7 @@ def handle_paypal_payment(request, booking: Booking):
         messages.error(request, "Failed to initialize payment. Please try again.")
         return redirect('booking')
 
-def render_booking_form(request, package_id: int = None, 
-                      quick_booking_date: str = None, 
-                      resources: dict = None, 
-                      min_date: date = None):
-    """
-    Render booking form with appropriate initial data
-    
-    Args:
-        request: HttpRequest object
-        package_id: Optional package ID for pre-selection
-        quick_booking_date: Optional pre-selected date
-        resources: Dictionary of active resources
-        min_date: Minimum allowed booking date
-        
-    Returns:
-        HttpResponse: Rendered booking form
-    """
+def render_booking_form(request, package_id=None, quick_booking_date=None, resources=None, min_date=None):
     initial = {}
     
     if package_id:
@@ -309,40 +235,16 @@ def render_booking_form(request, package_id: int = None,
     form = BookingForm(initial=initial, user=request.user)
     return render_booking_form_with_context(request, form, resources, min_date)
 
-def render_booking_form_with_context(request, form, resources: dict, min_date: date):
-    """
-    Render booking template with complete context
-    
-    Args:
-        request: HttpRequest object
-        form: BookingForm instance
-        resources: Dictionary of active resources
-        min_date: Minimum allowed booking date
-        
-    Returns:
-        HttpResponse: Rendered booking page
-    """
+def render_booking_form_with_context(request, form, resources, min_date):
     context = {
         'form': form,
         'available_times': TIME_SLOTS,
         'min_date': min_date,
-        **resources  # Unpack resources into context
+        **resources
     }
     return render(request, 'booking/booking.html', context)
 
-def handle_invalid_form(request, form, resources: dict, min_date: date):
-    """
-    Handle invalid form submissions with error messages
-    
-    Args:
-        request: HttpRequest object
-        form: Invalid BookingForm instance
-        resources: Dictionary of active resources
-        min_date: Minimum allowed booking date
-        
-    Returns:
-        HttpResponse: Rendered booking form with errors
-    """
+def handle_invalid_form(request, form, resources, min_date):
     for field, errors in form.errors.items():
         for error in errors:
             messages.error(request, f"{field}: {error}")
@@ -350,26 +252,18 @@ def handle_invalid_form(request, form, resources: dict, min_date: date):
     return render_booking_form_with_context(request, form, resources, min_date)
     
 def is_instructor_available(instructor, date, time):
-    """Check if instructor is available for given date and time"""
     try:
-        # Ensure date is a date object
         date_obj = parse_date(date)
-        
-        # Check available days
         weekday = date_obj.weekday()
         available_days = [int(d) for d in instructor.available_days.split(',') if d.strip()]
         if weekday not in available_days:
             return False
         
-        # Ensure time is a time object
         time_obj = parse_time(time)
-        
-        # Check working hours
         if (time_obj < instructor.start_time or 
             time_obj > instructor.end_time):
             return False
         
-        # Check special availability exceptions
         try:
             availability = Availability.objects.get(
                 instructor=instructor,
@@ -383,37 +277,17 @@ def is_instructor_available(instructor, date, time):
         logger.error(f"Instructor availability check failed: {str(e)}", exc_info=True)
         return False
 
-def send_booking_confirmation(booking, user):
-    """Send booking confirmation email"""
+def send_booking_confirmation(booking, user=None):
     try:
-        # Get admin email from settings or use default
-        admin_email = getattr(settings, 'ADMIN_EMAIL', settings.DEFAULT_FROM_EMAIL)
+        # Recipients list - always includes both emails
+        recipients = ["vviiddaa2@gmail.com", "luisdavid313@gmail.com"]
         
-        # User email
-        send_mail(
-            subject=f"Booking Confirmation: {booking.package.name}",
-            message=generate_user_email_content(booking),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
+        # Add user email if available (logged in user)
+        if user and hasattr(user, 'email'):
+            recipients.append(user.email)
         
-        # Admin notification - only if ADMIN_EMAIL is different from DEFAULT_FROM_EMAIL
-        if admin_email != settings.DEFAULT_FROM_EMAIL:
-            send_mail(
-                subject=f"New Booking: {user.get_full_name()}",
-                message=generate_admin_email_content(booking, user),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[admin_email],
-                fail_silently=False,
-            )
-            
-    except Exception as e:
-        logger.error(f"Failed to send booking confirmation: {str(e)}", exc_info=True)
-
-def generate_user_email_content(booking):
-    """Generate content for user confirmation email"""
-    message = f"""Thank you for booking with us!
+        subject = f"Booking Confirmation: {booking.package.name}"
+        text_content = f"""Thank you for booking with us!
 
 Booking Details:
 Package: {booking.package.name}
@@ -427,35 +301,63 @@ Total: ${booking.package.price}
 Payment Method: {booking.get_payment_method_display()}
 Status: {booking.get_status_display()}
 """
-    if booking.payment_method == 'cash':
-        message += "\nPlease bring cash to your lesson.\n"
-    
-    message += "\nIf you need to cancel or reschedule, please contact us at least 24 hours in advance."
-    return message
+        if booking.payment_method == 'cash':
+            text_content += "\nPlease bring cash to your lesson.\n"
+        
+        text_content += "\nIf you need to cancel or reschedule, please contact us at least 24 hours in advance."
 
-def generate_admin_email_content(booking, user):
-    """Generate content for admin notification email"""
-    return f"""New Booking:
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background-color: #d32f2f; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0;">
+                <h1 style="margin: 0;">🔫 Shooting Lesson Confirmation</h1>
+            </div>
+            
+            <div style="padding: 20px; background-color: #fff; border-left: 1px solid #eee; border-right: 1px solid #eee;">
+                <p>Hello <strong>{user.get_full_name() if user else 'Customer'}</strong>,</p>
+                
+                <p>Your shooting lesson has been confirmed with these details:</p>
+                
+                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #d32f2f;">
+                    <h3 style="margin-top: 0;">Lesson Details</h3>
+                    <p><strong>Package:</strong> {booking.package.name}</p>
+                    <p><strong>Instructor:</strong> {booking.instructor.user.get_full_name()}</p>
+                    <p><strong>Date & Time:</strong> {booking.date.strftime('%A, %B %d, %Y')} at {booking.time.strftime('%I:%M %p')}</p>
+                    <p><strong>Duration:</strong> {booking.duration} minutes</p>
+                    <p><strong>Location:</strong> {booking.location.name if booking.location else 'To be determined'}</p>
+                    <p><strong>Total:</strong> ${booking.package.price}</p>
+                </div>
+                
+                <p>Please arrive 15 minutes early for safety briefing.</p>
+            </div>
+            
+            <div style="padding: 20px; text-align: center; font-size: 12px; color: #777; background-color: #f8f9fa; border-radius: 0 0 5px 5px;">
+                <p>© {datetime.now().year} Ready Aim Learn. All rights reserved.</p>
+            </div>
+        </body>
+        </html>
+        """
 
-User: {user.get_full_name()} ({user.email})
-Package: {booking.package.name}
-Instructor: {booking.instructor.user.get_full_name()}
-Date: {booking.date} at {booking.time.strftime('%I:%M %p')}
-Duration: {booking.duration} minutes
-Payment Method: {booking.get_payment_method_display()}
-Status: {booking.get_status_display()}
-"""
+        email = EmailMultiAlternatives(
+            subject,
+            text_content,
+            settings.DEFAULT_FROM_EMAIL,
+            recipients
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send()
+            
+    except Exception as e:
+        logger.error(f"Failed to send booking confirmation: {str(e)}", exc_info=True)
 
 @login_required
 def process_payment(request):
-    """Handle PayPal payment processing"""
     pending_booking = request.session.get('pending_booking')
     if not pending_booking:
         messages.error(request, "No booking found to process payment.")
         return redirect('packages')
     
     try:
-        # Convert session data to proper types
         booking_data = {
             'date': parse_date(pending_booking['date']),
             'time': parse_time(pending_booking['time']),
@@ -470,7 +372,6 @@ def process_payment(request):
 
         package = get_object_or_404(TrainingPackage, id=booking_data['package_id'])
         
-        # Create PayPal payment
         paypal_dict = {
             "business": settings.PAYPAL_RECEIVER_EMAIL,
             "amount": str(package.price),
@@ -480,10 +381,9 @@ def process_payment(request):
             "notify_url": request.build_absolute_uri(reverse('paypal-ipn')),
             "return_url": request.build_absolute_uri(reverse('payment_success')),
             "cancel_return": request.build_absolute_uri(reverse('payment_cancel')),
-            "custom": str(request.user.id),  # Store user ID for verification
+            "custom": str(request.user.id),
         }
 
-        # Create form instance
         paypal_form = PayPalPaymentsForm(initial=paypal_dict)
         
         context = {
@@ -491,7 +391,7 @@ def process_payment(request):
             'paypal_form': paypal_form,
             'pending_booking': pending_booking,
             'paypal_amount': package.price,
-            "PAYPAL_CLIENT_ID": settings.PAYPAL_CLIENT_ID,  # add this
+            "PAYPAL_CLIENT_ID": settings.PAYPAL_CLIENT_ID,
         }
         
         return render(request, 'booking/paypal_payment.html', context)
@@ -502,16 +402,13 @@ def process_payment(request):
         return redirect('booking')
 
 def payment_success(request):
-    """Handle successful PayPal payment return"""
     try:
-        # Get transaction details from IPN
         latest_ipn = PayPalIPN.objects.filter(
             payment_status="Completed",
             custom=str(request.user.id)
         ).order_by('-created_at').first()
         
         if latest_ipn:
-            # Create the actual booking
             pending_booking = request.session.get('pending_booking')
             if pending_booking:
                 booking = create_actual_booking(request.user, pending_booking)
@@ -528,18 +425,15 @@ def payment_success(request):
         return redirect('user_dashboard')
 
 def payment_cancel(request):
-    """Handle canceled PayPal payment"""
     messages.warning(request, "Your payment was canceled. You can try again or choose another payment method.")
     return redirect('booking')
 
 @login_required
 def booking_confirmation(request, booking_id):
-    """Show booking confirmation"""
     booking = get_object_or_404(Booking, id=booking_id, user=request.user)
     return render(request, 'booking/confirmation.html', {'booking': booking})
 
 def create_actual_booking(user, booking_data):
-    """Create booking after successful PayPal payment"""
     package = get_object_or_404(TrainingPackage, id=booking_data['package_id'])
     instructor = get_object_or_404(Instructor, id=booking_data['instructor_id'])
     location = get_object_or_404(RangeLocation, id=booking_data['location_id']) if booking_data.get('location_id') else None
@@ -563,9 +457,7 @@ def create_actual_booking(user, booking_data):
     send_booking_confirmation(booking, user)
     return booking
 
-# ... [rest of the views remain unchanged] ...
 def check_availability(request):
-    """AJAX endpoint for checking available time slots"""
     if request.method == 'POST':
         form = AvailabilityCheckForm(request.POST)
         if form.is_valid():
@@ -587,14 +479,12 @@ def check_availability(request):
                         'error': 'Invalid instructor'
                     }, status=400)
                 
-                # Get existing bookings
                 existing_bookings = Booking.objects.filter(
                     date=date_obj,
                     instructor=instructor,
                     status__in=['pending', 'confirmed']
                 ).values_list('time', flat=True)
                 
-                # Get instructor's working hours
                 available_slots = []
                 for slot_value, slot_display in TIME_SLOTS:
                     if slot_value not in existing_bookings:
@@ -630,14 +520,12 @@ def check_availability(request):
     }, status=405)
 
 def about(request):
-    """About page with instructor information"""
     instructors = Instructor.objects.filter(is_active=True).annotate(
         num_reviews=Count('testimonials')
     ).order_by('-years_experience')
     return render(request, 'lessons/about.html', {'instructors': instructors})
 
 def instructor_detail(request, pk):
-    """Detailed view for an instructor"""
     instructor = get_object_or_404(Instructor, pk=pk, is_active=True)
     testimonials = Testimonial.objects.filter(
         instructor=instructor,
@@ -649,7 +537,6 @@ def instructor_detail(request, pk):
     })
 
 def faq(request):
-    """FAQ page with static questions and user comments"""
     faqs = [
         {"q": "Do I need to bring my own firearm or ammo?", 
          "a": "No. All necessary firearms, ammunition, eye and ear protection, and targets are provided."},
@@ -691,11 +578,9 @@ def faq(request):
     })
 
 def contact(request):
-    """Contact page with form submission"""
     if request.method == 'POST':
         form = ContactForm(request.POST)
         if form.is_valid():
-            # Send email
             send_mail(
                 subject=f"New Contact Form Submission from {form.cleaned_data['name']}",
                 message=f"Name: {form.cleaned_data['name']}\nEmail: {form.cleaned_data['email']}\n\nMessage:\n{form.cleaned_data['message']}",
@@ -714,21 +599,18 @@ def contact(request):
     })
 
 def legal(request):
-    """Legal information page"""
     return render(request, 'lessons/legal.html')
 
 def privacy(request):
-    """Privacy policy page"""
     return render(request, 'lessons/privacy.html')
 
 def testimonials(request):
-    """View all testimonials"""
     if request.method == 'POST' and request.user.is_authenticated:
         form = TestimonialForm(request.POST)
         if form.is_valid():
             testimonial = form.save(commit=False)
             testimonial.user = request.user
-            testimonial.is_approved = False  # Requires admin approval
+            testimonial.is_approved = False
             testimonial.save()
             messages.success(request, "Thank you for your testimonial! It will be reviewed before publishing.")
             return redirect('testimonials')
@@ -741,7 +623,6 @@ def testimonials(request):
     })
 
 def signup(request):
-    """Handle user registration with proper authentication"""
     if request.user.is_authenticated:
         return redirect('home')
 
@@ -749,13 +630,10 @@ def signup(request):
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            
-            # Authenticate and login the user
             authenticated_user = authenticate(
                 username=form.cleaned_data['username'],
                 password=form.cleaned_data['password1']
             )
-            
             if authenticated_user is not None:
                 login(request, authenticated_user)
                 messages.success(request, "Account created successfully! You are now logged in.")
@@ -769,7 +647,6 @@ def signup(request):
     return render(request, 'registration/signup.html', {'form': form})
 
 def user_login(request):
-    """Handle user authentication with next URL validation"""
     if request.user.is_authenticated:
         return redirect('user_dashboard')
 
@@ -778,8 +655,6 @@ def user_login(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            
-            # Safe redirect handling
             next_url = request.POST.get('next', '')
             if next_url and next_url.startswith('/'):
                 return redirect(next_url)
@@ -794,19 +669,15 @@ def user_login(request):
     })
 
 def user_logout(request):
-    """Handle user logout with confirmation"""
     if request.user.is_authenticated:
         logout(request)
         messages.success(request, "You have been logged out successfully.")
     return redirect('home')
 
-
 @login_required
 def user_dashboard(request):
-    """User dashboard with booking management and pagination"""
     try:
         now = timezone.now().date()
-        
         upcoming_bookings = Booking.objects.filter(
             user=request.user,
             date__gte=now
@@ -836,10 +707,8 @@ def user_dashboard(request):
 
 @login_required
 def booking_detail(request, booking_id):
-    """Detailed booking view with permission check"""
     try:
         booking = get_object_or_404(Booking, pk=booking_id, user=request.user)
-        
         cutoff_time = timezone.make_aware(datetime.combine(booking.date, dt_time(0, 0)))
         can_cancel = (cutoff_time - timezone.now()) > timezone.timedelta(hours=24)
         
@@ -858,10 +727,8 @@ def booking_detail(request, booking_id):
 
 @login_required
 def cancel_booking(request, booking_id):
-    """Handle booking cancellation with validation"""
     try:
         booking = get_object_or_404(Booking, pk=booking_id, user=request.user)
-        
         cutoff_time = timezone.make_aware(datetime.combine(booking.date, dt_time(0, 0)))
         if timezone.now() > cutoff_time - timezone.timedelta(hours=24):
             messages.error(request, "Cancellations must be made at least 24 hours in advance.")
@@ -892,7 +759,6 @@ def cancel_booking(request, booking_id):
 
 @login_required
 def delete_comment(request, comment_id):
-    """Handle FAQ comment deletion with confirmation"""
     try:
         comment = get_object_or_404(FAQComment, id=comment_id, user=request.user)
         
@@ -916,7 +782,6 @@ def delete_comment(request, comment_id):
 
 @login_required
 def profile_settings(request):
-    """Handle user profile updates"""
     try:
         if request.method == 'POST':
             user = request.user
@@ -943,7 +808,6 @@ def profile_settings(request):
 
 @login_required
 def change_password(request):
-    """Handle password change requests"""
     try:
         if request.method == 'POST':
             current_password = request.POST.get('current_password')
@@ -974,9 +838,7 @@ def change_password(request):
 
 @login_required
 def payment_methods(request):
-    """Display and manage payment methods"""
     try:
-        # Implementation would depend on your payment processor
         return render(request, 'dashboard/payment_methods.html')
     except Exception as e:
         logger.error(f"Error in payment_methods: {str(e)}")
@@ -984,18 +846,15 @@ def payment_methods(request):
         return redirect('user_dashboard')
 
 def handler404(request, exception):
-    """Custom 404 error handler with logging"""
     logger.warning(f'404 Error: {exception}')
     return render(request, 'errors/404.html', status=404)
 
 def handler500(request):
-    """Custom 500 error handler with logging"""
     logger.error('500 Server Error', exc_info=True)
     return render(request, 'errors/500.html', status=500)
 
 @login_required
 def auth_debug(request):
-    """Debug view for authentication (restrict in production)"""
     if not settings.DEBUG:
         return handler404(request, Exception("Debug view not available in production"))
     
@@ -1015,7 +874,6 @@ def auth_debug(request):
 
 @login_required
 def gallery_view(request):
-    """View function to display the gallery page"""
     try:
         context = {
             'page_title': 'Training Gallery',
