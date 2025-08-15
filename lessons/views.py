@@ -478,8 +478,9 @@ def process_payment(request):
             "invoice": f"booking-{timezone.now().timestamp()}",
             "currency_code": "USD",
             "notify_url": request.build_absolute_uri(reverse('paypal-ipn')),
-            "return_url": request.build_absolute_uri(reverse('booking_confirmation', args=[0])),  # Temp booking ID
-            "cancel_return": request.build_absolute_uri(reverse('booking')),
+            "return_url": request.build_absolute_uri(reverse('payment_success')),
+            "cancel_return": request.build_absolute_uri(reverse('payment_cancel')),
+            "custom": str(request.user.id),  # Store user ID for verification
         }
 
         # Create form instance
@@ -489,6 +490,8 @@ def process_payment(request):
             'package': package,
             'paypal_form': paypal_form,
             'pending_booking': pending_booking,
+            'paypal_amount': package.price,
+            "PAYPAL_CLIENT_ID": settings.PAYPAL_CLIENT_ID,  # add this
         }
         
         return render(request, 'booking/paypal_payment.html', context)
@@ -498,27 +501,40 @@ def process_payment(request):
         messages.error(request, f"Error processing payment: {str(e)}")
         return redirect('booking')
 
-@login_required
-def booking_confirmation(request, booking_id):
-    """Handle PayPal return and show confirmation"""
-    if booking_id == "0":  # PayPal return before booking created
+def payment_success(request):
+    """Handle successful PayPal payment return"""
+    try:
         # Get transaction details from IPN
-        try:
-            latest_ipn = PayPalIPN.objects.latest('id')
-            if latest_ipn.payment_status == "Completed":
-                # Create the actual booking
-                pending_booking = request.session.get('pending_booking')
-                if pending_booking:
-                    booking = create_actual_booking(request.user, pending_booking)
-                    del request.session['pending_booking']
-                    return render(request, 'booking/confirmation.html', {'booking': booking})
-        except PayPalIPN.DoesNotExist:
-            pass
+        latest_ipn = PayPalIPN.objects.filter(
+            payment_status="Completed",
+            custom=str(request.user.id)
+        ).order_by('-created_at').first()
         
-        messages.warning(request, "We're processing your payment. You'll receive a confirmation email shortly.")
+        if latest_ipn:
+            # Create the actual booking
+            pending_booking = request.session.get('pending_booking')
+            if pending_booking:
+                booking = create_actual_booking(request.user, pending_booking)
+                del request.session['pending_booking']
+                messages.success(request, "Payment successful! Your booking has been confirmed.")
+                return redirect('booking_confirmation', booking_id=booking.id)
+        
+        messages.warning(request, "Your payment was successful but we're processing your booking. You'll receive a confirmation email shortly.")
         return redirect('user_dashboard')
     
-    # Normal confirmation flow
+    except Exception as e:
+        logger.error(f"Error in payment_success: {str(e)}", exc_info=True)
+        messages.error(request, "There was an error processing your payment. Please contact support.")
+        return redirect('user_dashboard')
+
+def payment_cancel(request):
+    """Handle canceled PayPal payment"""
+    messages.warning(request, "Your payment was canceled. You can try again or choose another payment method.")
+    return redirect('booking')
+
+@login_required
+def booking_confirmation(request, booking_id):
+    """Show booking confirmation"""
     booking = get_object_or_404(Booking, id=booking_id, user=request.user)
     return render(request, 'booking/confirmation.html', {'booking': booking})
 
@@ -547,6 +563,7 @@ def create_actual_booking(user, booking_data):
     send_booking_confirmation(booking, user)
     return booking
 
+# ... [rest of the views remain unchanged] ...
 def check_availability(request):
     """AJAX endpoint for checking available time slots"""
     if request.method == 'POST':

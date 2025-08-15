@@ -150,10 +150,20 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # ==============================================
-# PayPal
+# PayPal Integration
 # ==============================================
+# PayPal REST SDK settings
+PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox")
+PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
 PAYPAL_RECEIVER_EMAIL = os.getenv("PAYPAL_RECEIVER_EMAIL")
-PAYPAL_TEST = os.getenv("PAYPAL_TEST", "True") == "True"
+PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET")
+PAYPAL_RETURN_URL = os.getenv("PAYPAL_RETURN_URL", "http://localhost:8000/payment/success/")
+PAYPAL_CANCEL_URL = os.getenv("PAYPAL_CANCEL_URL", "http://localhost:8000/payment/cancel/")
+
+# For production, set these in your .env:
+# PAYPAL_RETURN_URL=https://yourdomain.com/payment/success/
+# PAYPAL_CANCEL_URL=https://yourdomain.com/payment/cancel/
+
 
 import os
 from django.core.mail import EmailMultiAlternatives

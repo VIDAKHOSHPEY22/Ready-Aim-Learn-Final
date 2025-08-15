@@ -57,6 +57,9 @@ urlpatterns = [
         template_name='account/change_password_done.html'
     ), name='password_change_done'),
     path('payment/methods/', views.payment_methods, name='payment_methods'),
+    path('process-payment/', views.process_payment, name='process_payment'),
+    path('payment/success/', views.payment_success, name='payment_success'),
+    path('payment/cancel/', views.payment_cancel, name='payment_cancel'),
     
     # API endpoints
     path('api/check-availability/', views.check_availability, name='api_check_availability'),
