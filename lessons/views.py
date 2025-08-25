@@ -4,7 +4,7 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.conf import settings
 from django.utils import timezone
 from django.urls import path
@@ -15,6 +15,7 @@ from paypal.standard.models import ST_PP_COMPLETED
 from paypal.standard.ipn.models import PayPalIPN
 from django.urls import reverse
 from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth.models import User
 import logging
 from datetime import time as dt_time, datetime, date
 from .models import (
@@ -307,33 +308,122 @@ Status: {booking.get_status_display()}
         text_content += "\nIf you need to cancel or reschedule, please contact us at least 24 hours in advance."
 
         html_content = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background-color: #d32f2f; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0;">
-                <h1 style="margin: 0;">🔫 Shooting Lesson Confirmation</h1>
-            </div>
-            
-            <div style="padding: 20px; background-color: #fff; border-left: 1px solid #eee; border-right: 1px solid #eee;">
-                <p>Hello <strong>{user.get_full_name() if user else 'Customer'}</strong>,</p>
-                
-                <p>Your shooting lesson has been confirmed with these details:</p>
-                
-                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #d32f2f;">
-                    <h3 style="margin-top: 0;">Lesson Details</h3>
-                    <p><strong>Package:</strong> {booking.package.name}</p>
-                    <p><strong>Instructor:</strong> {booking.instructor.user.get_full_name()}</p>
-                    <p><strong>Date & Time:</strong> {booking.date.strftime('%A, %B %d, %Y')} at {booking.time.strftime('%I:%M %p')}</p>
-                    <p><strong>Duration:</strong> {booking.duration} minutes</p>
-                    <p><strong>Location:</strong> {booking.location.name if booking.location else 'To be determined'}</p>
-                    <p><strong>Total:</strong> ${booking.package.price}</p>
-                </div>
-                
-                <p>Please arrive 15 minutes early for safety briefing.</p>
-            </div>
-            
-            <div style="padding: 20px; text-align: center; font-size: 12px; color: #777; background-color: #f8f9fa; border-radius: 0 0 5px 5px;">
-                <p>© {datetime.now().year} Ready Aim Learn. All rights reserved.</p>
-            </div>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Booking Confirmation</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f7f7f7;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f7f7f7">
+                <tr>
+                    <td align="center" style="padding: 40px 0;">
+                        <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                            <!-- Header -->
+                            <tr>
+                                <td bgcolor="#1a365d" style="padding: 30px; text-align: center; border-bottom: 4px solid #e53e3e;">
+                                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">🔫 Shooting Lesson Confirmation</h1>
+                                    <p style="color: #cbd5e0; margin: 10px 0 0; font-size: 16px;">Ready Aim Learn - Firearms Training</p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Greeting -->
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <h2 style="color: #2d3748; margin-top: 0;">Hello {user.get_full_name() if user else 'Customer'},</h2>
+                                    <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">Thank you for booking with Ready Aim Learn! Your shooting lesson has been confirmed with the details below.</p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Booking Details -->
+                            <tr>
+                                <td style="padding: 0 30px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td bgcolor="#f8fafc" style="padding: 25px; border-radius: 8px; border-left: 5px solid #e53e3e;">
+                                                <h3 style="color: #2d3748; margin-top: 0; font-size: 20px;">📋 Lesson Details</h3>
+                                                
+                                                <table width="100%" cellpadding="8" cellspacing="0" border="0">
+                                                    <tr>
+                                                        <td width="30%" style="color: #4a5568; font-weight: 600;">Package:</td>
+                                                        <td width="70%" style="color: #2d3748;">{booking.package.name}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Instructor:</td>
+                                                        <td style="color: #2d3748;">{booking.instructor.user.get_full_name()}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Date & Time:</td>
+                                                        <td style="color: #2d3748;">{booking.date.strftime('%A, %B %d, %Y')} at {booking.time.strftime('%I:%M %p')}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Duration:</td>
+                                                        <td style="color: #2d3748;">{booking.duration} minutes</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Location:</td>
+                                                        <td style="color: #2d3748;">{booking.location.name if booking.location else 'To be determined'}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Total:</td>
+                                                        <td style="color: #2d3748; font-weight: 600; color: #2b6cb0;">${booking.package.price}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Payment Method:</td>
+                                                        <td style="color: #2d3748;">{booking.get_payment_method_display()}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Status:</td>
+                                                        <td style="color: #38a169; font-weight: 600;">{booking.get_status_display()}</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            
+                            <!-- Important Notes -->
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <div style="background-color: #fffbeb; padding: 20px; border-radius: 8px; border-left: 5px solid #d69e2e;">
+                                        <h3 style="color: #744210; margin-top: 0; font-size: 18px;">⚠️ Important Information</h3>
+                                        <p style="color: #744210; margin: 0; line-height: 1.6;">
+                                            Please arrive <strong>15 minutes early</strong> for safety briefing and equipment setup.
+                                            { 'Please bring cash to your lesson.' if booking.payment_method == 'cash' else '' }
+                                            If you need to cancel or reschedule, please contact us at least 24 hours in advance.
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Contact Info -->
+                            <tr>
+                                <td style="padding: 0 30px 30px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#edf2f7" style="border-radius: 8px;">
+                                        <tr>
+                                            <td style="padding: 20px; text-align: center;">
+                                                <p style="color: #4a5568; margin: 0; font-weight: 600;">Questions? Contact us at:</p>
+                                                <p style="color: #2b6cb0; margin: 8px 0; font-size: 18px; font-weight: 600;">support@readyaimlearn.com</p>
+                                                <p style="color: #4a5568; margin: 0;">(555) 123-4567</p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td bgcolor="#2d3748" style="padding: 25px; text-align: center; color: #cbd5e0; font-size: 14px;">
+                                    <p style="margin: 0 0 10px;">© {datetime.now().year} Ready Aim Learn. All rights reserved.</p>
+                                    <p style="margin: 0; font-size: 12px;">123 Shooting Range Rd, Firearm City, FC 12345</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
         </body>
         </html>
         """
@@ -349,6 +439,315 @@ Status: {booking.get_status_display()}
             
     except Exception as e:
         logger.error(f"Failed to send booking confirmation: {str(e)}", exc_info=True)
+
+def send_contact_email(form_data):
+    """Send email for contact form submissions"""
+    try:
+        subject = f"New Contact Form Submission from {form_data['name']}"
+        
+        text_content = f"""
+        Name: {form_data['name']}
+        Email: {form_data['email']}
+        Phone: {form_data.get('phone', 'Not provided')}
+        
+        Message:
+        {form_data['message']}
+        """
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Contact Form Submission</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f7f7f7;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f7f7f7">
+                <tr>
+                    <td align="center" style="padding: 40px 0;">
+                        <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                            <!-- Header -->
+                            <tr>
+                                <td bgcolor="#2c5282" style="padding: 30px; text-align: center;">
+                                    <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">📧 New Contact Form Submission</h1>
+                                </td>
+                            </tr>
+                            
+                            <!-- Content -->
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <p style="color: #4a5568; font-size: 16px; margin-top: 0;">A visitor has submitted the contact form on your website. Here are the details:</p>
+                                    
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f8fafc" style="border-radius: 8px; padding: 20px;">
+                                        <tr>
+                                            <td width="30%" style="color: #4a5568; font-weight: 600; padding: 8px 0;">Name:</td>
+                                            <td width="70%" style="color: #2d3748; padding: 8px 0;">{form_data['name']}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="color: #4a5568; font-weight: 600; padding: 8px 0;">Email:</td>
+                                            <td style="color: #2b6cb0; padding: 8px 0;">{form_data['email']}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="color: #4a5568; font-weight: 600; padding: 8px 0;">Phone:</td>
+                                            <td style="color: #2d3748; padding: 8px 0;">{form_data.get('phone', 'Not provided')}</td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <h3 style="color: #2d3748; margin: 25px 0 15px; font-size: 18px;">Message Content:</h3>
+                                    <div style="background-color: #edf2f7; padding: 20px; border-radius: 8px; border-left: 4px solid #2c5282;">
+                                        <p style="color: #4a5568; margin: 0; line-height: 1.6; font-style: italic;">{form_data['message']}</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td bgcolor="#2d3748" style="padding: 20px; text-align: center; color: #cbd5e0; font-size: 14px;">
+                                    <p style="margin: 0;">© {datetime.now().year} Ready Aim Learn. All rights reserved.</p>
+                                    <p style="margin: 10px 0 0; font-size: 12px;">This message was sent from the contact form on your website.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        # Send to both admin emails
+        recipients = ["vviiddaa2@gmail.com", "luisdavid313@gmail.com"]
+        
+        email = EmailMultiAlternatives(
+            subject,
+            text_content,
+            settings.DEFAULT_FROM_EMAIL,
+            recipients
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send()
+        
+        # Send confirmation to the user who submitted the form
+        send_contact_confirmation_email(form_data)
+            
+    except Exception as e:
+        logger.error(f"Failed to send contact email: {str(e)}", exc_info=True)
+
+def send_contact_confirmation_email(form_data):
+    """Send confirmation email to the user who submitted the contact form"""
+    try:
+        subject = "Thank you for contacting Ready Aim Learn"
+        
+        text_content = f"""
+        Hi {form_data['name']},
+        
+        Thank you for reaching out to us! We've received your message and will get back to you within 24 hours.
+        
+        Here's a copy of your message:
+        {form_data['message']}
+        
+        If you have any urgent questions, please call us at (555) 123-4567.
+        
+        Best regards,
+        The Ready Aim Learn Team
+        """
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Thank You for Contacting Us</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f7f7f7;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f7f7f7">
+                <tr>
+                    <td align="center" style="padding: 40px 0;">
+                        <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                            <!-- Header -->
+                            <tr>
+                                <td bgcolor="#38a169" style="padding: 30px; text-align: center;">
+                                    <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">✉️ Thank You for Contacting Us</h1>
+                                </td>
+                            </tr>
+                            
+                            <!-- Content -->
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <h2 style="color: #2d3748; margin-top: 0;">Hello {form_data['name']},</h2>
+                                    <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">Thank you for reaching out to Ready Aim Learn! We've received your message and will get back to you within 24 hours.</p>
+                                    
+                                    <div style="background-color: #f0fff4; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #38a169;">
+                                        <h3 style="color: #2f855a; margin-top: 0; font-size: 18px;">Your Message:</h3>
+                                        <p style="color: #2d3748; margin: 0; line-height: 1.6; font-style: italic;">{form_data['message']}</p>
+                                    </div>
+                                    
+                                    <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">If you have any urgent questions, please call us at <strong style="color: #2b6cb0;">(555) 123-4567</strong>.</p>
+                                    
+                                    <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">Best regards,<br><strong>The Ready Aim Learn Team</strong></p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Contact Info -->
+                            <tr>
+                                <td style="padding: 0 30px 30px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#e6fffa" style="border-radius: 8px;">
+                                        <tr>
+                                            <td style="padding: 15px; text-align: center;">
+                                                <p style="color: #234e52; margin: 0; font-size: 14px;">📍 123 Shooting Range Rd, Firearm City, FC 12345</p>
+                                                <p style="color: #234e52; margin: 5px 0 0; font-size: 14px;">📞 (555) 123-4567 | ✉️ info@readyaimlearn.com</p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td bgcolor="#2d3748" style="padding: 20px; text-align: center; color: #cbd5e0; font-size: 14px;">
+                                    <p style="margin: 0;">© {datetime.now().year} Ready Aim Learn. All rights reserved.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        email = EmailMultiAlternatives(
+            subject,
+            text_content,
+            settings.DEFAULT_FROM_EMAIL,
+            [form_data['email']]
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send()
+            
+    except Exception as e:
+        logger.error(f"Failed to send contact confirmation email: {str(e)}", exc_info=True)
+
+def send_registration_email(user):
+    """Send welcome email after user registration"""
+    try:
+        subject = "Welcome to Ready Aim Learn!"
+        
+        text_content = f"""
+        Hi {user.get_full_name() or user.username},
+        
+        Welcome to Ready Aim Learn! Your account has been successfully created.
+        
+        With your account, you can:
+        - Book shooting lessons online
+        - View your upcoming lessons
+        - Manage your booking history
+        - Update your profile information
+        
+        If you have any questions, don't hesitate to contact us.
+        
+        Happy shooting!
+        
+        The Ready Aim Learn Team
+        """
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Welcome to Ready Aim Learn</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f7f7f7;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f7f7f7">
+                <tr>
+                    <td align="center" style="padding: 40px 0;">
+                        <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                            <!-- Header -->
+                            <tr>
+                                <td bgcolor="#3182ce" style="padding: 30px; text-align: center;">
+                                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">🎯 Welcome to Ready Aim Learn!</h1>
+                                </td>
+                            </tr>
+                            
+                            <!-- Content -->
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <h2 style="color: #2d3748; margin-top: 0;">Hi {user.get_full_name() or user.username},</h2>
+                                    <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">Welcome to Ready Aim Learn! Your account has been successfully created and you're now part of our firearms training community.</p>
+                                    
+                                    <div style="background-color: #ebf8ff; padding: 25px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #3182ce;">
+                                        <h3 style="color: #2c5282; margin-top: 0; font-size: 20px;">What you can do with your account:</h3>
+                                        <table width="100%" cellpadding="10" cellspacing="0" border="0">
+                                            <tr>
+                                                <td width="10%" valign="top" style="color: #3182ce; font-size: 18px;">📅</td>
+                                                <td width="90%" style="color: #2d3748;">Book shooting lessons online</td>
+                                            </tr>
+                                            <tr>
+                                                <td valign="top" style="color: #3182ce; font-size: 18px;">👁️</td>
+                                                <td style="color: #2d3748;">View your upcoming lessons</td>
+                                            </tr>
+                                            <tr>
+                                                <td valign="top" style="color: #3182ce; font-size: 18px;">📋</td>
+                                                <td style="color: #2d3748;">Manage your booking history</td>
+                                            </tr>
+                                            <tr>
+                                                <td valign="top" style="color: #3182ce; font-size: 18px;">👤</td>
+                                                <td style="color: #2d3748;">Update your profile information</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    
+                                    <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">If you have any questions, don't hesitate to contact our support team.</p>
+                                    
+                                    <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">Happy shooting!<br><strong>The Ready Aim Learn Team</strong></p>
+                                </td>
+                            </tr>
+                            
+                            <!-- CTA Button -->
+                            <tr>
+                                <td style="padding: 0 30px 30px; text-align: center;">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td align="center">
+                                                <a href="{settings.SITE_URL}/packages" style="background-color: #3182ce; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; font-size: 16px;">Browse Training Packages</a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td bgcolor="#2d3748" style="padding: 20px; text-align: center; color: #cbd5e0; font-size: 14px;">
+                                    <p style="margin: 0;">© {datetime.now().year} Ready Aim Learn. All rights reserved.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        # Send to both admin emails and the new user
+        recipients = ["vviiddaa2@gmail.com", "luisdavid313@gmail.com", user.email]
+        
+        email = EmailMultiAlternatives(
+            subject,
+            text_content,
+            settings.DEFAULT_FROM_EMAIL,
+            recipients
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send()
+            
+    except Exception as e:
+        logger.error(f"Failed to send registration email: {str(e)}", exc_info=True)
 
 @login_required
 def process_payment(request):
@@ -581,13 +980,9 @@ def contact(request):
     if request.method == 'POST':
         form = ContactForm(request.POST)
         if form.is_valid():
-            send_mail(
-                subject=f"New Contact Form Submission from {form.cleaned_data['name']}",
-                message=f"Name: {form.cleaned_data['name']}\nEmail: {form.cleaned_data['email']}\n\nMessage:\n{form.cleaned_data['message']}",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[settings.ADMIN_EMAIL],
-                fail_silently=False,
-            )
+            # Send email notification
+            send_contact_email(form.cleaned_data)
+            
             messages.success(request, "Thank you for your message! We'll respond within 24 hours.")
             return redirect('contact')
     else:
@@ -630,6 +1025,10 @@ def signup(request):
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
+            
+            # Send registration email
+            send_registration_email(user)
+            
             authenticated_user = authenticate(
                 username=form.cleaned_data['username'],
                 password=form.cleaned_data['password1']
@@ -888,3 +1287,206 @@ def gallery_view(request):
         logger.error(f"Error in gallery_view: {str(e)}")
         messages.error(request, "An error occurred while loading the gallery.")
         return redirect('user_dashboard')
+
+from django.core.mail import EmailMultiAlternatives
+from django.conf import settings
+import logging
+from django.contrib import messages
+from django.shortcuts import redirect, render
+from django.utils import timezone
+
+logger = logging.getLogger(__name__)
+
+def legal(request):
+    """Render the legal terms page and handle acceptance"""
+    if request.method == 'POST' and request.user.is_authenticated:
+        # Handle terms acceptance
+        try:
+            # Get current user and timestamp
+            user = request.user
+            timestamp = timezone.now()
+            
+            # Here you would typically store the acceptance in the database
+            # For example: user.profile.terms_accepted = timestamp
+            # user.profile.save()
+            
+            # Send confirmation email
+            send_legal_confirmation_email(user, timestamp)
+            
+            messages.success(request, "Thank you for accepting our terms and conditions!")
+            return redirect('home')
+            
+        except Exception as e:
+            logger.error(f"Error processing legal acceptance: {str(e)}")
+            messages.error(request, "There was an error processing your acceptance. Please try again.")
+    
+    return render(request, 'lessons/legal.html')
+
+def get_user_email_safely(user):
+    """
+    Safely get user email with multiple fallback methods
+    """
+    # Method 1: Direct email from user object
+    email = getattr(user, 'email', None)
+    
+    # Method 2: Check if email exists and is valid
+    if email and email.strip() and '@' in email:
+        return email
+    
+    # Method 3: Try to get email from social account (for Google OAuth users)
+    if hasattr(user, 'socialaccount_set'):
+        try:
+            social_account = user.socialaccount_set.filter(provider='google').first()
+            if social_account:
+                # Try different possible locations for email in social account
+                social_email = (
+                    social_account.extra_data.get('email') or
+                    getattr(social_account, 'email', None) or
+                    social_account.extra_data.get('primary_email') or
+                    social_account.extra_data.get('emailAddress')
+                )
+                if social_email and '@' in social_email:
+                    return social_email
+        except Exception as e:
+            logger.warning(f"Error getting social account email: {str(e)}")
+    
+    # Method 4: Try to refresh user from database
+    try:
+        from django.contrib.auth import get_user_model
+        db_user = get_user_model().objects.get(pk=user.pk)
+        db_email = getattr(db_user, 'email', None)
+        if db_email and db_email.strip() and '@' in db_email:
+            return db_email
+    except Exception as e:
+        logger.warning(f"Error getting email from database: {str(e)}")
+    
+    return None
+
+def send_legal_confirmation_email(user, timestamp):
+    """Send email confirmation of legal terms acceptance"""
+    try:
+        subject = "Terms and Conditions Acceptance Confirmation"
+        
+        # Get user email safely with multiple fallbacks
+        user_email = get_user_email_safely(user)
+        user_full_name = user.get_full_name() or user.username
+        
+        # If no valid email found, log and return
+        if not user_email:
+            logger.warning(f"No valid email address found for user {user.username}, skipping email notification")
+            return
+        
+        text_content = f"""
+        Terms and Conditions Acceptance Confirmation
+        
+        Dear {user_full_name},
+        
+        This email confirms that you have accepted the Ready Aim Learn Terms and Conditions.
+        
+        Acceptance Details:
+        - User: {user.username}
+        - Email: {user_email}
+        - Date: {timestamp.strftime('%B %d, %Y')}
+        - Time: {timestamp.strftime('%I:%M %p %Z')}
+        
+        Your acceptance has been recorded in our system. Please keep this email for your records.
+        
+        If you have any questions about our terms and conditions, please contact us at legal@readyaimlearn.com.
+        
+        Thank you,
+        The Ready Aim Learn Team
+        """
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Terms Acceptance Confirmation</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f7f7f7;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f7f7f7">
+                <tr>
+                    <td align="center" style="padding: 40px 0;">
+                        <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                            <!-- Header -->
+                            <tr>
+                                <td bgcolor="#2c5282" style="padding: 30px; text-align: center;">
+                                    <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 600;">✅ Terms Acceptance Confirmed</h1>
+                                </td>
+                            </tr>
+                            
+                            <!-- Content -->
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <h2 style="color: #2d3748; margin-top: 0;">Hello {user_full_name},</h2>
+                                    <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">This email confirms that you have accepted the Ready Aim Learn Terms and Conditions.</p>
+                                    
+                                    <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #2c5282;">
+                                        <h3 style="color: #2d3748; margin-top: 0;">Acceptance Details:</h3>
+                                        <table width="100%" cellpadding="8" cellspacing="0" border="0">
+                                            <tr>
+                                                <td width="30%" style="color: #4a5568; font-weight: 600;">User:</td>
+                                                <td width="70%" style="color: #2d3748;">{user.username}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="color: #4a5568; font-weight: 600;">Email:</td>
+                                                <td style="color: #2b6cb0;">{user_email}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="color: #4a5568; font-weight: 600;">Date:</td>
+                                                <td style="color: #2d3748;">{timestamp.strftime('%B %d, %Y')}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="color: #4a5568; font-weight: 600;">Time:</td>
+                                                <td style="color: #2d3748;">{timestamp.strftime('%I:%M %p %Z')}</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    
+                                    <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">Your acceptance has been recorded in our system. Please keep this email for your records.</p>
+                                    
+                                    <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">If you have any questions about our terms and conditions, please contact us at <strong>legal@readyaimlearn.com</strong>.</p>
+                                    
+                                    <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">Thank you,<br><strong>The Ready Aim Learn Team</strong></p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td bgcolor="#2d3748" style="padding: 20px; text-align: center; color: #cbd5e0; font-size: 14px;">
+                                    <p style="margin: 0;">© {timestamp.year} Ready Aim Learn. All rights reserved.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+        
+        # Send to user and admin
+        recipients = [user_email, "vviiddaa2@gmail.com", "luisdavid313@gmail.com"]
+        
+        # Filter out empty or None emails with strict validation
+        recipients = [email for email in recipients if email and email.strip() and '@' in email]
+        
+        if not recipients:
+            logger.warning("No valid recipients found for legal confirmation email")
+            return
+            
+        email = EmailMultiAlternatives(
+            subject,
+            text_content,
+            settings.DEFAULT_FROM_EMAIL,
+            recipients
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send()
+        
+        logger.info(f"Successfully sent legal confirmation email to {user_email} for user {user.username}")
+            
+    except Exception as e:
+        logger.error(f"Failed to send legal confirmation email: {str(e)}", exc_info=True)
