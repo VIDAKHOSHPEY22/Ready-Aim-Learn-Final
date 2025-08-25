@@ -1,0 +1,127 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms Acceptance Confirmation</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f7f7f7;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f7f7f7">
+        <tr>
+            <td align="center" style="padding: 40px 0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td bgcolor="#1a365d" style="padding: 30px; text-align: center; border-bottom: 4px solid #e8b923;">
+                            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">✅ Terms & Waiver Accepted</h1>
+                            <p style="color: #cbd5e0; margin: 10px 0 0; font-size: 16px;">Ready Aim Learn - Firearms Training</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Greeting -->
+                    <tr>
+                        <td style="padding: 30px;">
+                            <h2 style="color: #2d3748; margin-top: 0;">Hello {{ user.get_full_name|default:user.username }},</h2>
+                            <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">Thank you for reviewing and accepting our Terms of Service and Liability Waiver. Your digital confirmation has been successfully recorded.</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Acceptance Details -->
+                    <tr>
+                        <td style="padding: 0 30px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td bgcolor="#f8fafc" style="padding: 25px; border-radius: 8px; border-left: 5px solid #e8b923;">
+                                        <h3 style="color: #2d3748; margin-top: 0; font-size: 20px;">📋 Acceptance Details</h3>
+                                        
+                                        <table width="100%" cellpadding="8" cellspacing="0" border="0">
+                                            <tr>
+                                                <td width="30%" style="color: #4a5568; font-weight: 600;">User:</td>
+                                                <td width="70%" style="color: #2d3748;">{{ user.get_full_name|default:user.username }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="color: #4a5568; font-weight: 600;">Email:</td>
+                                                <td style="color: #2d3748;">{{ user.email }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="color: #4a5568; font-weight: 600;">Accepted On:</td>
+                                                <td style="color: #2d3748;">{{ timestamp|date:"F j, Y" }} at {{ timestamp|time:"g:i A" }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="color: #4a5568; font-weight: 600;">IP Address:</td>
+                                                <td style="color: #2d3748;">{{ ip_address }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="color: #4a5568; font-weight: 600;">Document:</td>
+                                                <td style="color: #2d3748;">Terms of Service & Liability Waiver</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="color: #4a5568; font-weight: 600;">Version:</td>
+                                                <td style="color: #2d3748;">January 1, 2025</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Important Notes -->
+                    <tr>
+                        <td style="padding: 30px;">
+                            <div style="background-color: #fffbeb; padding: 20px; border-radius: 8px; border-left: 5px solid #e8b923;">
+                                <h3 style="color: #744210; margin-top: 0; font-size: 18px;">📝 Document Summary</h3>
+                                <p style="color: #744210; margin: 0; line-height: 1.6;">
+                                    By accepting our terms, you acknowledge understanding the inherent risks of firearms training and agree to follow all safety protocols. You release Ready Aim Learn from liability for injuries arising from training activities and confirm you meet all eligibility requirements.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Access Document -->
+                    <tr>
+                        <td style="padding: 0 30px 30px; text-align: center;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{ site_url }}{% url 'legal' %}" style="background-color: #e8b923; color: #1a1a1a; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; font-size: 16px; margin: 10px;">
+                                            📄 Review Terms Again
+                                        </a>
+                                        <a href="{{ site_url }}{% url 'booking' %}" style="background-color: #1a365d; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; font-size: 16px; margin: 10px;">
+                                            🎯 Book Your Lesson
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Contact Info -->
+                    <tr>
+                        <td style="padding: 0 30px 30px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#edf2f7" style="border-radius: 8px;">
+                                <tr>
+                                    <td style="padding: 20px; text-align: center;">
+                                        <p style="color: #4a5568; margin: 0; font-weight: 600;">Questions about our terms?</p>
+                                        <p style="color: #2b6cb0; margin: 8px 0; font-size: 18px; font-weight: 600;">legal@readyaimlearn.com</p>
+                                        <p style="color: #4a5568; margin: 0;">(555) 123-4567</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td bgcolor="#1a1a1a" style="padding: 25px; text-align: center; color: #cbd5e0; font-size: 14px;">
+                            <p style="margin: 0 0 10px;">© {% now "Y" %} Ready Aim Learn. All rights reserved.</p>
+                            <p style="margin: 0; font-size: 12px;">123 Range Street, Suite 100, Los Angeles, CA 90001</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
