@@ -1,30 +1,30 @@
-{% load static socialaccount %}
+{% load static %}
+{% load socialaccount %}
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Tactical Login | Ready Aim Learn</title>
+    <title>Tactical Authentication | Ready Aim Learn</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css2?family=Agency+FB:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="icon" href="{% static 'lessons/images/favicon.ico' %}" type="image/x-icon" />
     <style>
         :root {
             --primary: #e8b923;
             --primary-dark: #c99a1a;
             --secondary: #1a1a1a;
             --accent: #8b0000;
-            --light: #e6e6e6;
+            --light: #f0f0f0;
             --dark: #121212;
-            --gray: #4d4d4d;
-            --light-gray: #333333;
+            --gray: #6d6d6d;
+            --light-gray: #444;
             --white: #ffffff;
             --black: #000000;
-            --camo-light: #5d5d5d;
-            --camo-dark: #2e2e2e;
-            --camo-green: #3a4a3a;
-            --google-blue: #4285F4;
-            --google-dark-blue: #3367D6;
+            --error: #ff4444;
+            --success: #00C851;
+            --info: #33b5e5;
         }
 
         * {
@@ -36,21 +36,19 @@
 
         body {
             background-color: var(--dark);
-            background-image: 
-                linear-gradient(rgba(30, 30, 30, 0.9), rgba(30, 30, 30, 0.9)),
-                url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
-            height: 100vh;
+            background-image: url('https://codetheweb.blog/assets/img/posts/css-advanced-background-images/mountains.jpg');
+            min-height: 100vh;
+            background-size: cover; 
             display: flex;
             justify-content: center;
             align-items: center;
             color: var(--light);
             padding: 20px;
             position: relative;
-            overflow: hidden;
         }
 
         .tactical-overlay {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
@@ -65,11 +63,11 @@
         }
 
         .login-container {
-            background: linear-gradient(145deg, var(--camo-dark), var(--camo-light));
-            padding: 2.5rem;
+            background: linear-gradient(145deg, var(--secondary), var(--dark));
+            padding: 2rem;
             border-radius: 8px;
             width: 100%;
-            max-width: 420px;
+            max-width: 450px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
             border: 1px solid var(--primary);
             position: relative;
@@ -84,8 +82,8 @@
         }
 
         h2 {
-            margin-bottom: 1.8rem;
-            font-size: 2.2rem;
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
             font-weight: 700;
             color: var(--primary);
             text-transform: uppercase;
@@ -98,49 +96,57 @@
             content: '';
             display: block;
             width: 70px;
-            height: 4px;
+            height: 3px;
             background: linear-gradient(90deg, var(--primary), var(--accent));
             margin: 1rem auto 0;
-            box-shadow: 0 0 12px rgba(232, 185, 35, 0.7);
+            box-shadow: 0 0 10px rgba(232, 185, 35, 0.5);
             border-radius: 2px;
         }
 
         .login-form {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
-            margin: 2rem 0;
+            gap: 1rem;
+            margin: 1.5rem 0;
         }
 
         .form-group {
             position: relative;
+            margin-bottom: 0.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--light);
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
         }
 
         .form-input {
             width: 100%;
-            padding: 14px 16px;
-            border: 1px solid var(--gray);
+            padding: 12px 16px;
+            border: 1px solid var(--light-gray);
             border-radius: 6px;
             font-size: 1rem;
-            background-color: rgba(30, 30, 30, 0.8);
+            background-color: rgba(40, 40, 40, 0.8);
             color: var(--light);
             outline: none;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
-        }
-
-        .form-input::placeholder {
-            color: var(--gray);
-            text-transform: none;
-            opacity: 0.7;
+            transition: all 0.3s ease;
         }
 
         .form-input:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(232, 185, 35, 0.3);
-            background-color: rgba(40, 40, 40, 0.9);
+        }
+
+        .error-message {
+            color: var(--error);
+            font-size: 0.8rem;
+            margin-top: 0.3rem;
+            display: block;
         }
 
         .submit-btn {
@@ -155,20 +161,38 @@
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 1.5px;
-            margin-top: 0.5rem;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            margin-top: 1rem;
         }
 
         .submit-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
-        .submit-btn:active {
-            transform: translateY(1px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        .google-btn {
+            background: linear-gradient(135deg, #4285F4, #356AC3);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 1rem 0;
+            width: 100%;
+        }
+
+        .google-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(135deg, #4e8ef7, #3f7ae0);
         }
 
         .divider {
@@ -176,69 +200,27 @@
             align-items: center;
             margin: 1.5rem 0;
             color: var(--gray);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
         .divider::before,
         .divider::after {
-            content: '';
+            content: "";
             flex: 1;
-            border-bottom: 1px solid var(--gray);
-            opacity: 0.3;
+            border-bottom: 1px solid var(--light-gray);
         }
 
-        .divider::before {
-            margin-right: 1rem;
-        }
-
-        .divider::after {
-            margin-left: 1rem;
-        }
-
-        .google-login-btn {
-            background-color: var(--google-blue);
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 6px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            width: 100%;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        .google-login-btn:hover {
-            background-color: var(--google-dark-blue);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .google-login-btn:active {
-            transform: translateY(1px);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-        }
-
-        .google-icon {
-            width: 20px;
-            height: 20px;
-            background-color: white;
-            border-radius: 2px;
-            padding: 3px;
+        .divider span {
+            padding: 0 10px;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
         }
 
         .signup-link {
-            margin-top: 1.8rem;
+            margin-top: 1.5rem;
             font-size: 0.95rem;
             text-align: center;
-            color: var(--gray);
+            color: var(--light-gray);
         }
 
         .signup-link a {
@@ -246,118 +228,201 @@
             text-decoration: none;
             font-weight: bold;
             transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            position: relative;
-        }
-
-        .signup-link a::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background-color: var(--primary);
-            transition: width 0.3s ease;
         }
 
         .signup-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* Alert box styling */
+        .security-alert {
+            background: linear-gradient(135deg, rgba(51, 181, 229, 0.15), rgba(33, 150, 243, 0.1));
+            border: 1px solid var(--info);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: left;
+            position: relative;
+            animation: pulse 2s infinite;
+        }
+
+        .security-alert h3 {
+            color: var(--info);
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .security-alert p {
+            font-size: 0.9rem;
+            line-height: 1.4;
+            color: var(--light);
+            margin-bottom: 5px;
+        }
+
+        .security-alert ul {
+            padding-left: 20px;
+            margin: 8px 0;
+            font-size: 0.85rem;
+        }
+
+        .security-alert li {
+            margin-bottom: 5px;
             color: var(--light);
         }
 
-        .signup-link a:hover::after {
-            width: 100%;
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(51, 181, 229, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(51, 181, 229, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(51, 181, 229, 0); }
         }
 
-        /* Fallback Google logo styles */
-        .google-fallback-icon {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            background-color: white;
-            border-radius: 2px;
-            position: relative;
+        /* Messages styling */
+        .messages {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
         }
-        
-        .google-fallback-icon::before {
-            content: "G";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: var(--google-blue);
-            font-weight: bold;
-            font-size: 14px;
-            font-family: Arial, sans-serif;
+
+        .alert {
+            padding: 0.75rem 1.25rem;
+            margin-bottom: 1rem;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .alert-error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
         @media (max-width: 480px) {
             .login-container {
-                padding: 1.8rem;
+                padding: 1.5rem;
             }
             
             h2 {
                 font-size: 1.8rem;
-                margin-bottom: 1.5rem;
             }
         }
     </style>
 </head>
 <body>
     <div class="tactical-overlay"></div>
+
+    <!-- Messages container -->
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags %}{{ message.tags }}{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
     
     <div class="login-container">
-        <h2>Tactical Login</h2>
+        <h2>AUTHENTICATION REQUIRED</h2>
         
-        <form method="post" class="login-form">
+        <!-- Security Alert Box -->
+        <div class="security-alert">
+            <h3>
+                <span class="material-icons">security</span>
+                SECURITY RECOMMENDATION
+            </h3>
+            <p>For better registration experience, enhanced security, and email notifications, we highly recommend using Google authentication:</p>
+            <ul>
+                <li>One-click registration process</li>
+                <li>Enhanced account security with Google's protection</li>
+                <li>Instant email notifications for important updates</li>
+                <li>No need to remember another password</li>
+            </ul>
+        </div>
+
+        <!-- Google Login Button -->
+        <a href="{% provider_login_url 'google' process='login' %}" class="google-btn">
+            <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+            </svg>
+            CONTINUE WITH GOOGLE
+        </a>
+
+        <div class="divider">
+            <span>OR</span>
+        </div>
+        
+        <form method="post" class="login-form" id="loginForm">
             {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="error-message">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
             <div class="form-group">
-                <input type="text" name="username" class="form-input" placeholder="Username" required>
+                <label for="id_username">CALL SIGN</label>
+                <input type="text" name="username" id="id_username" class="form-input" 
+                       placeholder="Your tactical identifier" required
+                       value="{{ form.username.value|default:'' }}"
+                       autocomplete="username">
+                {% if form.username.errors %}
+                    <span class="error-message">{{ form.username.errors.0 }}</span>
+                {% endif %}
             </div>
+            
             <div class="form-group">
-                <input type="password" name="password" class="form-input" placeholder="Password" required>
+                <label for="id_password">ENCRYPTION KEY</label>
+                <input type="password" name="password" id="id_password" class="form-input" 
+                       placeholder="Enter your passphrase" required
+                       autocomplete="current-password">
+                {% if form.password.errors %}
+                    <span class="error-message">{{ form.password.errors.0 }}</span>
+                {% endif %}
             </div>
+            
             <button type="submit" class="submit-btn">
-                Access Restricted Area
-                <span class="material-icons" style="font-size: 18px; margin-left: 8px;">lock_open</span>
+                AUTHENTICATE
+                <span class="material-icons" style="font-size: 18px; margin-left: 8px;">login</span>
             </button>
         </form>
 
-        <div class="divider">OR</div>
-
-        <a href="{% provider_login_url 'google' %}" class="google-login-link">
-            <button type="button" class="google-login-btn">
-                <!-- Multiple fallback options for Google logo -->
-                <picture>
-                    <!-- Try loading from static first -->
-                    <source srcset="{% static 'images/google-logo.svg' %}" type="image/svg">
-                    
-                    <!-- Try CDN if static fails -->
-                    <source srcset="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" type="image/svg+xml">
-                    
-                    <!-- Base64 embedded SVG as final fallback -->
-                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iI0VBMjVCMiIgZD0iTTEyIDExaDl2MkgxMnptLTcgMGg0djJINXptNyA3aDl2LTJIMTJ6bS03IDBoNHYtMkg1em0xMS0xMS4xTDExLjEgMTdoMS44bDUuOS01LjljLS4yLS4zLS40LS43LS43LTEiLz48L3N2Zz4=" 
-                         alt="Google logo" class="google-icon"
-                         onerror="this.onerror=null;this.parentElement.innerHTML='<span class=\'google-fallback-icon\'></span>'">
-                </picture>
-                Continue with Google
-            </button>
-        </a>
-
         <p class="signup-link">
-            No clearance? <a href="{% url 'signup' %}">Request Access</a>
+            NEW OPERATIVE? <a href="{% url 'signup' %}">REQUEST CLEARANCE HERE</a>
         </p>
     </div>
 
     <script>
-        // Final fallback if all image loading methods fail
         document.addEventListener('DOMContentLoaded', function() {
-            const googleIcons = document.querySelectorAll('.google-icon');
-            googleIcons.forEach(icon => {
-                icon.addEventListener('error', function() {
-                    this.outerHTML = '<span class="google-fallback-icon"></span>';
-                });
+            // Auto-hide messages after 5 seconds
+            const messages = document.querySelectorAll('.alert');
+            messages.forEach(message => {
+                setTimeout(() => {
+                    message.style.transition = 'all 0.5s ease';
+                    message.style.opacity = '0';
+                    setTimeout(() => message.remove(), 500);
+                }, 5000);
             });
         });
     </script>
