@@ -229,11 +229,24 @@ class ContactForm(forms.Form):
             'placeholder': _('your@email.com')
         })
     )
-    subject = forms.CharField(
-        max_length=200,
+    phone = forms.CharField(
+        max_length=15,
+        required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': _('Subject')
+            'placeholder': _('Your phone (optional)')
+        })
+    )
+    subject = forms.ChoiceField(
+        choices=[
+            ('', _('Select a subject')),
+            ('General Inquiry', _('General Inquiry')),
+            ('Booking Question', _('Booking Question')),
+            ('Private Event', _('Private Event')),
+            ('Other', _('Other')),
+        ],
+        widget=forms.Select(attrs={
+            'class': 'form-control'
         })
     )
     message = forms.CharField(
@@ -251,6 +264,15 @@ class ContactForm(forms.Form):
         except ValidationError:
             raise ValidationError(_("Please enter a valid email address"))
         return email
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone', '')
+        if phone:
+            # Remove any non-digit characters
+            phone = re.sub(r'\D', '', phone)
+            if len(phone) < 10:
+                raise ValidationError(_("Please enter a valid phone number"))
+        return phone
 
 class PackageFilterForm(forms.Form):
     DURATION_CHOICES = [
