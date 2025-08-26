@@ -1294,6 +1294,9 @@ import logging
 from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.utils import timezone
+import os
+from django.http import FileResponse
+from django.urls import reverse
 
 logger = logging.getLogger(__name__)
 
@@ -1311,7 +1314,7 @@ def legal(request):
             # user.profile.save()
             
             # Send confirmation email
-            send_legal_confirmation_email(user, timestamp)
+            send_legal_confirmation_email(user, timestamp, request)
             
             messages.success(request, "Thank you for accepting our terms and conditions!")
             return redirect('home')
@@ -1321,6 +1324,72 @@ def legal(request):
             messages.error(request, "There was an error processing your acceptance. Please try again.")
     
     return render(request, 'lessons/legal.html')
+
+def download_registration_form(request):
+    """Serve the registration form PDF for download"""
+    try:
+        # Try multiple possible paths for the PDF file
+        possible_paths = [
+            os.path.join(settings.MEDIA_ROOT, 'documents', 'registration_form.pdf'),
+            os.path.join(settings.BASE_DIR, 'media', 'documents', 'registration_form.pdf'),
+            os.path.join(settings.BASE_DIR, 'static', 'documents', 'registration_form.pdf'),
+            os.path.join(settings.STATIC_ROOT, 'documents', 'registration_form.pdf') if settings.STATIC_ROOT else None,
+            os.path.join(settings.BASE_DIR, 'registration_form.pdf'),
+        ]
+        
+        # Filter out None paths
+        possible_paths = [path for path in possible_paths if path]
+        
+        pdf_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                pdf_path = path
+                break
+        
+        if pdf_path:
+            return FileResponse(open(pdf_path, 'rb'), 
+                              as_attachment=True, 
+                              filename='registration_form.pdf')
+        else:
+            # Create a simple PDF file on the fly if not found
+            from io import BytesIO
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.pagesizes import letter
+            
+            buffer = BytesIO()
+            p = canvas.Canvas(buffer, pagesize=letter)
+            p.drawString(100, 750, "Registration Form")
+            p.drawString(100, 730, "Ready Aim Learn")
+            p.drawString(100, 710, "=" * 50)
+            p.drawString(100, 690, "Student Information:")
+            p.drawString(100, 670, "Full Name: ___________________________")
+            p.drawString(100, 650, "Email: ___________________________")
+            p.drawString(100, 630, "Phone: ___________________________")
+            p.drawString(100, 610, "=" * 50)
+            p.drawString(100, 590, "Course Details:")
+            p.drawString(100, 570, "Course Name: ___________________________")
+            p.drawString(100, 550, "Start Date: ___________________________")
+            p.drawString(100, 530, "=" * 50)
+            p.drawString(100, 510, "Instructor Section:")
+            p.drawString(100, 490, "Instructor Signature: ___________________________")
+            p.drawString(100, 470, "Date: ___________________________")
+            p.drawString(100, 450, "Approval Stamp: ___________________________")
+            p.drawString(100, 400, "Instructions:")
+            p.drawString(100, 380, "1. Please fill out all sections completely")
+            p.drawString(100, 360, "2. Send the completed form to luisdavid313@gmail.com")
+            p.drawString(100, 340, "3. Bring the signed form to your instructor for final approval")
+            p.showPage()
+            p.save()
+            
+            buffer.seek(0)
+            return FileResponse(buffer, 
+                              as_attachment=True, 
+                              filename='registration_form.pdf')
+            
+    except Exception as e:
+        logger.error(f"Error serving PDF file: {str(e)}")
+        messages.error(request, "Error downloading the form. Please contact support.")
+        return redirect('legal')
 
 def get_user_email_safely(user):
     """
@@ -1362,7 +1431,27 @@ def get_user_email_safely(user):
     
     return None
 
-def send_legal_confirmation_email(user, timestamp):
+def find_pdf_file():
+    """Find the PDF file in multiple possible locations"""
+    possible_paths = [
+        os.path.join(settings.MEDIA_ROOT, 'documents', 'registration_form.pdf'),
+        os.path.join(settings.BASE_DIR, 'media', 'documents', 'registration_form.pdf'),
+        os.path.join(settings.BASE_DIR, 'static', 'documents', 'registration_form.pdf'),
+        os.path.join(settings.STATIC_ROOT, 'documents', 'registration_form.pdf') if settings.STATIC_ROOT else None,
+        os.path.join(settings.BASE_DIR, 'registration_form.pdf'),
+        os.path.join(settings.BASE_DIR, 'assets', 'registration_form.pdf'),
+    ]
+    
+    # Filter out None paths
+    possible_paths = [path for path in possible_paths if path]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+    
+    return None
+
+def send_legal_confirmation_email(user, timestamp, request):
     """Send email confirmation of legal terms acceptance"""
     try:
         subject = "Terms and Conditions Acceptance Confirmation"
@@ -1375,6 +1464,13 @@ def send_legal_confirmation_email(user, timestamp):
         if not user_email:
             logger.warning(f"No valid email address found for user {user.username}, skipping email notification")
             return
+        
+        # Find PDF file
+        pdf_path = find_pdf_file()
+        has_pdf_attachment = pdf_path is not None
+        
+        # Get absolute URL for download link
+        download_url = request.build_absolute_uri(reverse('download_registration_form'))
         
         text_content = f"""
         Terms and Conditions Acceptance Confirmation
@@ -1390,6 +1486,14 @@ def send_legal_confirmation_email(user, timestamp):
         - Time: {timestamp.strftime('%I:%M %p %Z')}
         
         Your acceptance has been recorded in our system. Please keep this email for your records.
+        
+        IMPORTANT: Please fill out the registration except the final paragraph and send it to 
+        luisdavid313@gmail.com to be signed by your instructor in person 
+        for final approval.
+        
+        {"The registration form is attached to this email." if has_pdf_attachment else "Please download the registration form from our website."}
+        
+        Download link: {download_url}
         
         If you have any questions about our terms and conditions, please contact us at legal@readyaimlearn.com.
         
@@ -1447,6 +1551,32 @@ def send_legal_confirmation_email(user, timestamp):
                                     
                                     <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">Your acceptance has been recorded in our system. Please keep this email for your records.</p>
                                     
+                                    <!-- Important Notice Section -->
+                                    <div style="background-color: #fff5f5; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #e53e3e;">
+                                        <h3 style="color: #c53030; margin-top: 0; font-size: 18px;">📋 Important Next Steps:</h3>
+                                        <p style="color: #742a2a; font-size: 15px; line-height: 1.5; margin-bottom: 10px;">
+                                            Please fill out the registration form except the final paragraph and send it to 
+                                            <strong style="color: #2b6cb0;">luisdavid313@gmail.com</strong> to be signed by your instructor 
+                                            in person for final approval.
+                                        </p>
+                                        <p style="color: #742a2a; font-size: 15px; line-height: 1.5; margin: 0;">
+                                            <strong>Note:</strong> This step is required to complete your registration process.
+                                        </p>
+                                    </div>
+                                    
+                                    <!-- PDF Download Button -->
+                                    <div style="text-align: center; margin: 30px 0;">
+                                        <a href="{download_url}" 
+                                           style="display: inline-block; background-color: #2c5282; color: white; 
+                                                  padding: 15px 30px; text-decoration: none; border-radius: 8px; 
+                                                  font-weight: 600; font-size: 16px; transition: background-color 0.3s;">
+                                            📄 Download Registration Form (PDF)
+                                        </a>
+                                        <p style="color: #4a5568; font-size: 14px; margin-top: 10px;">
+                                            {"The form has also been attached to this email." if has_pdf_attachment else "Please download the form using the button above."}
+                                        </p>
+                                    </div>
+                                    
                                     <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">If you have any questions about our terms and conditions, please contact us at <strong>legal@readyaimlearn.com</strong>.</p>
                                     
                                     <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">Thank you,<br><strong>The Ready Aim Learn Team</strong></p>
@@ -1484,9 +1614,60 @@ def send_legal_confirmation_email(user, timestamp):
             recipients
         )
         email.attach_alternative(html_content, "text/html")
+        
+        # Attach PDF file if it exists
+        if pdf_path:
+            try:
+                with open(pdf_path, 'rb') as pdf_file:
+                    email.attach('registration_form.pdf', pdf_file.read(), 'application/pdf')
+                logger.info(f"PDF file attached successfully: {pdf_path}")
+            except Exception as e:
+                logger.error(f"Error attaching PDF file: {str(e)}")
+        else:
+            logger.warning("PDF file not found for attachment. Creating a simple one...")
+            # Create a simple PDF attachment
+            from io import BytesIO
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.pagesizes import letter
+            
+            buffer = BytesIO()
+            p = canvas.Canvas(buffer, pagesize=letter)
+            p.drawString(100, 750, "Registration Form - Ready Aim Learn")
+            p.drawString(100, 730, "Please fill out and send to luisdavid313@gmail.com")
+            p.drawString(100, 700, "=" * 60)
+            p.drawString(100, 680, "Student Information:")
+            p.drawString(100, 660, "Full Name: ___________________________")
+            p.drawString(100, 640, "Email: ___________________________")
+            p.drawString(100, 620, "Course: ___________________________")
+            p.drawString(100, 600, "=" * 60)
+            p.drawString(100, 580, "Instructor Approval Section:")
+            p.drawString(100, 560, "Signature: ___________________________")
+            p.drawString(100, 540, "Date: ___________________________")
+            p.drawString(100, 520, "Approval Stamp: ___________________________")
+            p.showPage()
+            p.save()
+            
+            buffer.seek(0)
+            email.attach('registration_form.pdf', buffer.getvalue(), 'application/pdf')
+        
         email.send()
         
         logger.info(f"Successfully sent legal confirmation email to {user_email} for user {user.username}")
             
     except Exception as e:
         logger.error(f"Failed to send legal confirmation email: {str(e)}", exc_info=True)
+
+# در views.py
+from django.http import FileResponse
+import os
+
+def serve_registration_form(request):
+    file_path = os.path.join(settings.STATIC_ROOT, 'lessons', 'documents', 'registration_form.pdf')
+    return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
+
+# در urls.py
+from . import views
+
+urlpatterns = [
+    path('legal/registration_form.pdf', views.serve_registration_form),
+]
