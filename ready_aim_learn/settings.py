@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'lessons',  # Shooting lessons app
+    'corsheaders',
     'paypal.standard.ipn',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
 # Middleware
 # ==============================================
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', 
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -188,3 +190,13 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https' if not DEBUG else 'http'
 CSRF_TRUSTED_ORIGINS = os.getenv(
     "CSRF_TRUSTED_ORIGINS", "http://127.0.0.1:8000,http://localhost:8000"
 ).split(",")
+
+# CORS settings
+CORS_ALLOW_ALL_ORIGINS = True  # For development only
+# Or for production:
+CORS_ALLOWED_ORIGINS = [
+    "https://www.sandbox.paypal.com",
+    "https://www.paypal.com",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
