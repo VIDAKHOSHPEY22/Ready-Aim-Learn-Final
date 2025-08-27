@@ -979,6 +979,80 @@
                 font-size: 2rem;
             }
         }
+
+        .download-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #eee;
+}
+
+.download-link-container {
+    text-align: center;
+    margin: 1.5rem 0;
+}
+
+.download-btn {
+    display: inline-block;
+    background-color: #e74c3c;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.download-btn:hover {
+    background-color: #c0392b;
+}
+
+.download-btn i {
+    margin-right: 8px;
+}
+
+.download-note {
+    font-size: 0.9rem;
+    color: #777;
+    margin-top: 8px;
+}
+.registration-instructions {
+    background-color: #fff8e6;
+    border-left: 4px solid #ffc107;
+    padding: 1.2rem;
+    margin-top: 2rem;
+    border-radius: 4px;
+}
+
+.instructions-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.8rem;
+}
+
+.instructions-header i {
+    color: #e6a800;
+    font-size: 1.4rem;
+    margin-right: 0.7rem;
+}
+
+.instructions-header h3 {
+    color: #7d6608;
+    font-size: 1.2rem;
+}
+
+.instructions-content {
+    color: #7d6608;
+}
+
+.instructions-content a {
+    color: #7d6608;
+    font-weight: bold;
+    text-decoration: underline;
+}
+
+.instructions-content a:hover {
+    color: #5a4a06;
+}
     </style>
 </head>
 <body>
@@ -1119,7 +1193,27 @@
                     Phone: (555) 123-4567<br>
                     Email: legal@readyaimlearn.com</p>
                 </div>
+                            <!-- بخش جدید برای دانلود PDF -->
+            <div class="section download-section">
+                <h2>Download Terms & Waiver</h2>
+                <p>If you're unable to download the PDF from your email, you can download a copy directly from our website:</p>
+                <div class="download-link-container">
+                    <a href="{% static 'lessons/documents/registration_form.pdf' %}" class="download-btn" download>
+                        <i class="fas fa-file-pdf"></i> Download Terms & Waiver (PDF)
+                    </a>
+                    <p class="download-note">File size: 5.87KB | Version: 1.0</p>
+                </div>
             </div>
+                <!-- بخش راهنمای ثبت‌نام -->
+    <div class="registration-instructions">
+        <div class="instructions-header">
+            <i class="fas fa-exclamation-circle"></i>
+            <h3>Registration Instructions</h3>
+        </div>
+        <div class="instructions-content">
+            <p><strong>IMPORTANT:</strong> Please complete the registration form (excluding the final paragraph) and email it to <a href="mailto:luisdavid313@gmail.com">luisdavid313@gmail.com</a>. Your instructor will sign it in person during your session for final approval.</p>
+        </div>
+    </div>
         </div>
     </section>
 
