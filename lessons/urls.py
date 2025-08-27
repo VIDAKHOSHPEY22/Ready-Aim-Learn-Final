@@ -19,6 +19,7 @@ urlpatterns = [
     path('check-availability/', views.check_availability, name='check_availability'),
     path('process-payment/', views.process_payment, name='process_payment'),
     path('paypal/', include(paypal_urls)),
+    path('payment/confirm/', views.payment_confirm, name='payment_confirm'),
     path('accounts/', include('allauth.urls')),
     path('gallery/', views.gallery_view, name='gallery'),
     
