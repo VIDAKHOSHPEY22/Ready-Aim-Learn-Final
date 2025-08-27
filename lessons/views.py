@@ -749,6 +749,8 @@ def send_registration_email(user):
     except Exception as e:
         logger.error(f"Failed to send registration email: {str(e)}", exc_info=True)
 
+
+
 @login_required
 def process_payment(request):
     pending_booking = request.session.get('pending_booking')
@@ -800,8 +802,10 @@ def process_payment(request):
         messages.error(request, f"Error processing payment: {str(e)}")
         return redirect('booking')
 
+@login_required
 def payment_success(request):
     try:
+        # Check for successful PayPal payment
         latest_ipn = PayPalIPN.objects.filter(
             payment_status="Completed",
             custom=str(request.user.id)
@@ -810,8 +814,13 @@ def payment_success(request):
         if latest_ipn:
             pending_booking = request.session.get('pending_booking')
             if pending_booking:
+                # Create the actual booking in database
                 booking = create_actual_booking(request.user, pending_booking)
-                del request.session['pending_booking']
+                
+                # Clear the pending booking from session
+                if 'pending_booking' in request.session:
+                    del request.session['pending_booking']
+                
                 messages.success(request, "Payment successful! Your booking has been confirmed.")
                 return redirect('booking_confirmation', booking_id=booking.id)
         
@@ -823,6 +832,7 @@ def payment_success(request):
         messages.error(request, "There was an error processing your payment. Please contact support.")
         return redirect('user_dashboard')
 
+@login_required
 def payment_cancel(request):
     messages.warning(request, "Your payment was canceled. You can try again or choose another payment method.")
     return redirect('booking')
@@ -833,11 +843,20 @@ def booking_confirmation(request, booking_id):
     return render(request, 'booking/confirmation.html', {'booking': booking})
 
 def create_actual_booking(user, booking_data):
+    """Create an actual booking record in the database"""
     package = get_object_or_404(TrainingPackage, id=booking_data['package_id'])
     instructor = get_object_or_404(Instructor, id=booking_data['instructor_id'])
-    location = get_object_or_404(RangeLocation, id=booking_data['location_id']) if booking_data.get('location_id') else None
-    weapon = get_object_or_404(Weapon, id=booking_data['weapon_id']) if booking_data.get('weapon_id') else None
     
+    # Handle optional fields
+    location = None
+    if booking_data.get('location_id'):
+        location = get_object_or_404(RangeLocation, id=booking_data['location_id'])
+    
+    weapon = None
+    if booking_data.get('weapon_id'):
+        weapon = get_object_or_404(Weapon, id=booking_data['weapon_id'])
+    
+    # Create the booking
     booking = Booking.objects.create(
         user=user,
         package=package,
@@ -848,14 +867,15 @@ def create_actual_booking(user, booking_data):
         time=parse_time(booking_data['time']),
         duration=booking_data['duration'],
         payment_method='paypal',
-        notes=booking_data['notes'],
+        notes=booking_data.get('notes', ''),
         status='confirmed',
         payment_status='completed',
     )
     
+    # Send confirmation email
     send_booking_confirmation(booking, user)
+    
     return booking
-
 def check_availability(request):
     if request.method == 'POST':
         form = AvailabilityCheckForm(request.POST)
