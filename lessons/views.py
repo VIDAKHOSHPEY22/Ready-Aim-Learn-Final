@@ -1691,3 +1691,39 @@ from . import views
 urlpatterns = [
     path('legal/registration_form.pdf', views.serve_registration_form),
 ]
+
+from django.views.decorators.csrf import csrf_exempt
+import json
+@csrf_exempt
+@login_required
+def payment_confirm(request):
+    """
+    این ویو بعد از پرداخت موفق PayPal صدا زده میشه.
+    دیتای پرداخت رو از فرانت‌اند می‌گیره و بوکینگ واقعی رو می‌سازه.
+    """
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            logger.info(f"PayPal confirmation received: {data}")
+
+            # گرفتن pending_booking از session
+            pending_booking = request.session.get('pending_booking')
+            if not pending_booking:
+                logger.warning("No pending booking found in session")
+                return JsonResponse({"error": "No pending booking found"}, status=400)
+
+            # ایجاد بوکینگ واقعی
+            booking = create_actual_booking(request.user, pending_booking)
+
+            # پاک کردن session
+            if 'pending_booking' in request.session:
+                del request.session['pending_booking']
+
+            logger.info(f"Booking created successfully: {booking.id}")
+            return JsonResponse({"success": True, "booking_id": booking.id})
+
+        except Exception as e:
+            logger.error(f"Error in payment_confirm: {str(e)}", exc_info=True)
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
