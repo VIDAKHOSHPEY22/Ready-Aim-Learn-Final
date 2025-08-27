@@ -38,6 +38,7 @@ urlpatterns = [
     
     # Legal pages
     path('legal/', views.legal, name='legal'),
+    path('download-registration-form/', views.download_registration_form, name='download_registration_form'),
     path('privacy/', views.privacy, name='privacy'),
     
     # Authentication and user accounts
