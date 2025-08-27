@@ -168,7 +168,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            height: 40px;
+            height: 30px;
             box-sizing: border-box;
             text-decoration: none;
         }
@@ -224,10 +224,15 @@
             box-shadow: 0 0 10px rgba(232, 185, 35, 0.5);
             transition: all 0.3s ease;
         }
+        .user-avatar:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(232, 185, 35, 0.7);
+        }
 
         .user-name {
             font-size: 0.95rem;
             letter-spacing: 1px;
+            cursor: pointer;
         }
 
         .logout-form {
@@ -774,9 +779,6 @@
                 grid-template-columns: 1fr;
             }
 
-            .user-name {
-                display: none;
-            }
         }
 
         /* Animation for User Avatar */
@@ -1076,6 +1078,12 @@
                 document.querySelector(this.getAttribute('href')).scrollIntoView({
                     behavior: 'smooth'
                 });
+            });
+        });
+               // Make avatar clickable (added functionality)
+        document.querySelectorAll('.user-avatar, .user-name').forEach(element => {
+            element.addEventListener('click', function() {
+                window.location.href = "{% url 'user_dashboard' %}";
             });
         });
     </script>
