@@ -165,7 +165,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            height: 40px;
+            height: 30px;
             box-sizing: border-box;
             text-decoration: none;
         }
@@ -609,6 +609,10 @@
         .copyright a:hover {
             text-decoration: underline;
         }
+        .Waiver  {
+                text-decoration: underline;
+                color: #d35400;
+            }
 
         /* Responsive Styles */
         @media (max-width: 992px) {
@@ -713,10 +717,6 @@
                 font-size: 1.2rem;
             }
 
-            .user-name {
-                display: none;
-            }
-
             .user-info {
                 padding: 6px 10px;
             }
@@ -738,6 +738,10 @@
             .footer-content {
                 grid-template-columns: 1fr;
             }
+            .Waiver  {
+                text-decoration: underline;
+                color: #d35400;
+            }
         }
 
         /* Animation for User Avatar */
@@ -755,6 +759,68 @@
 
         .user-info:hover .user-avatar {
             animation: tactical-pulse 1.5s infinite;
+        }
+
+               /* Terms Alert */
+               .terms-alert {
+            background: linear-gradient(135deg, #fff5e6, #ffedcc);
+            border: 2px solid #e8b923;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .terms-alert h3 {
+            color: #d35400;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .terms-alert p {
+            color: #7d6608;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        
+        .terms-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #e8b923, #d8a91b);
+            color: #1a1a1a;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .terms-btn:hover {
+            background: linear-gradient(135deg, #d8a91b, #e8b923);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .terms-accepted {
+            background: linear-gradient(135deg, #e8f5e8, #d4efdf);
+            border: 2px solid #27ae60;
+        }
+        
+        .terms-accepted h3 {
+            color: #27ae60;
+        }
+        
+        .terms-accepted p {
+            color: #196f3d;
+        }
+            /* Animation for terms alert */
+            @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
@@ -820,6 +886,24 @@
 
     <div class="booking-container">
         <div class="container">
+            <div class="terms-alert" id="termsAlert">
+                <h3>
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Important: Terms & Conditions Required
+                </h3>
+                
+                <p>
+                    Before booking your lesson, you must read and accept our 
+                   <a href="{% url 'legal' %}" class="Waiver">Terms & Conditions.</a>
+                    This includes important information about safety protocols, cancellation policies, 
+                    and liability waivers required for all training sessions.
+                </p>
+                
+                <a href="{% url 'legal' %}" class="terms-btn" id="termsButton">
+                    <i class="fas fa-file-contract"></i>
+                    Review & Accept Terms
+                </a>
+            </div>
             <div class="booking-card">
                 <h2>Schedule Your Lesson</h2>
                 
@@ -1113,6 +1197,70 @@
                 });
             });
         });
+
+// Terms acceptance functionality
+const termsAlert = document.getElementById('termsAlert');
+const termsButton = document.getElementById('termsButton');
+const submitButton = document.querySelector('.btn-submit');
+
+// Simulate terms acceptance for demo purposes
+termsButton.addEventListener('click', function(e) {
+    e.preventDefault();
+    
+    // Update the alert to show acceptance
+    termsAlert.innerHTML = `
+        <h3>
+            <i class="fas fa-check-circle"></i>
+            Terms & Conditions Accepted
+        </h3>
+        
+        <p>
+            Thank you for accepting our Terms & Conditions. You may now proceed with your booking.
+        </p>
+        
+        <a href="{% url 'legal' %}" class="terms-btn" id="reviewTermsButton">
+            <i class="fas fa-file-contract"></i>
+            Review Terms Again
+        </a>
+    `;
+    
+    termsAlert.classList.add('terms-accepted');
+    
+    // Enable the submit button
+    submitButton.disabled = false;
+    submitButton.innerHTML = '<i class="fas fa-calendar-check"></i> Confirm Booking';
+    
+    // Add event listener for the review button - FIXED
+    document.getElementById('reviewTermsButton').addEventListener('click', function(e) {
+        // Allow default link behavior - user will be redirected to legal page
+        // No need for alert or preventDefault()
+    });
+});
+
+// Form submission handling
+document.getElementById('booking-form').addEventListener('submit', function(e) {
+    // In a real application, remove preventDefault() to allow form submission
+    // e.preventDefault();
+    // alert('Booking submitted successfully! In a real application, this would process your booking.');
+});
+
+// Smooth scroll for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        const targetId = this.getAttribute('href');
+        if (targetId !== "#") {
+            document.querySelector(targetId).scrollIntoView({
+                behavior: 'smooth'
+            });
+        }
+    });
+});
+
+// Initialize if date is already selected
+if (dateInput.value) {
+    dateInput.dispatchEvent(new Event('change'));
+}
     </script>
 </body>
 </html>
