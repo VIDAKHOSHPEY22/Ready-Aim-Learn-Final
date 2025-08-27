@@ -15,7 +15,7 @@
             <i class="fas fa-check-circle"></i>
             <div>
                 <h4>Payment Successful!</h4>
-                <p>Your booking has been confirmed.</p>
+                <p>Your booking has been confirmed. Redirecting to homepage...</p>
             </div>
         </div>
 
@@ -325,6 +325,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     const badge = document.querySelector('.status-badge');
                     badge.className = 'status-badge confirmed';
                     badge.innerHTML = '<i class="fas fa-check-circle"></i> Confirmed';
+                    
+                    // Redirect to homepage after 3 seconds
+                    setTimeout(function() {
+                        window.location.href = "/";  // Redirect to homepage
+                    }, 3000);
                 });
             },
             onError: function(err) {
