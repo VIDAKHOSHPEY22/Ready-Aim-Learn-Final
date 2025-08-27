@@ -15,7 +15,7 @@
             <i class="fas fa-check-circle"></i>
             <div>
                 <h4>Payment Successful!</h4>
-                <p>Your booking has been confirmed. Redirecting to homepage...</p>
+                <p>Your booking has been confirmed. Redirecting to your dashboard...</p>
             </div>
         </div>
 
@@ -326,10 +326,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     badge.className = 'status-badge confirmed';
                     badge.innerHTML = '<i class="fas fa-check-circle"></i> Confirmed';
                     
-                    // Redirect to homepage after 3 seconds
-                    setTimeout(function() {
-                        window.location.href = "/";  // Redirect to homepage
-                    }, 3000);
+                    // Send confirmation to backend
+                    fetch("/payment/confirm/", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": "{{ csrf_token }}"
+                        },
+                        body: JSON.stringify({
+                            orderID: data.orderID,
+                            payerID: data.payerID,
+                            details: details
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(resp => {
+                        console.log("Booking created:", resp);
+                        setTimeout(function() {
+                            window.location.href = "/dashboard/";
+                        }, 3000);
+                    })
+                    .catch(err => {
+                        console.error("Booking save error:", err);
+                        alert("Your payment succeeded, but we couldn't save your booking. Please contact support.");
+                    });
                 });
             },
             onError: function(err) {
