@@ -105,16 +105,13 @@ class BookingAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Booking Details', {
-            'fields': ('user', 'package', 'weapon', 'instructor', 'date', 'time', 'duration')
-        }),
-        ('Customer Information', {
-            'fields': ('full_name', 'email', 'phone', 'notes')
+            'fields': ('user', 'package', 'weapon', 'instructor', 'date', 'time', 'duration', 'notes')
         }),
         ('Payment Information', {
             'fields': ('payment_method', 'payment_status', 'transaction_id', 'amount_paid')
         }),
         ('System Information', {
-            'fields': ('is_confirmed', 'created_at', 'updated_at')
+            'fields': ('created_at', 'updated_at')
         }),
     )
 
