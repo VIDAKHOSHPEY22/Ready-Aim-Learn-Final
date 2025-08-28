@@ -85,11 +85,17 @@
     padding: 0;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
-    font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background-color: #f5f7ff;
+    font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #f5f7ff 0%, #e6e9ff 100%);
     color: var(--text-dark);
     line-height: 1.6;
+    min-height: 100vh;
+    padding: 20px 0;
 }
 
 /* Payment Container */
@@ -97,6 +103,7 @@ body {
     max-width: 600px;
     margin: 2rem auto;
     padding: 0 1rem;
+    animation: fadeIn 0.5s ease-out;
 }
 
 .payment-card {
@@ -108,46 +115,67 @@ body {
 }
 
 .payment-card:hover {
-    box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+    box-shadow: 0 10px 30px rgba(67, 97, 238, 0.15);
+    transform: translateY(-5px);
 }
 
 /* Header */
 .payment-header {
     background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     color: white;
-    padding: 1.5rem;
+    padding: 1.8rem 1.5rem;
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.8rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.payment-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    transform: rotate(30deg);
 }
 
 .payment-header i {
-    font-size: 1.8rem;
+    font-size: 2rem;
     margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 1;
 }
 
 .payment-header h2 {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     font-weight: 600;
+    position: relative;
+    z-index: 1;
+    letter-spacing: 0.5px;
 }
 
 /* Alerts */
 .payment-alert {
-    padding: 1.2rem;
-    margin: 1rem;
-    border-radius: 8px;
+    padding: 1.3rem 1.5rem;
+    margin: 1.2rem;
+    border-radius: 10px;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.2rem;
     background-color: rgba(76, 201, 240, 0.1);
     border-left: 4px solid var(--success);
+    animation: slideIn 0.4s ease-out;
 }
 
 .payment-alert i {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     color: var(--success);
+    flex-shrink: 0;
 }
 
 .payment-alert.processing {
@@ -160,44 +188,57 @@ body {
 }
 
 .payment-alert h4 {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     margin-bottom: 0.3rem;
+    font-weight: 600;
 }
 
 .payment-alert p {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     color: var(--text-light);
+    line-height: 1.5;
 }
 
 /* Booking Summary */
 .booking-summary {
-    padding: 1.5rem;
+    padding: 1.8rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .booking-summary h3 {
-    font-size: 1.2rem;
-    margin-bottom: 1.2rem;
+    font-size: 1.3rem;
+    margin-bottom: 1.5rem;
     display: flex;
     align-items: center;
-    gap: 0.7rem;
+    gap: 0.8rem;
     color: var(--primary);
+    font-weight: 600;
 }
 
 .booking-summary h3 i {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
 }
 
 .summary-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 0.8rem;
+    gap: 1rem;
 }
 
 .summary-item {
     display: flex;
     justify-content: space-between;
-    padding: 0.7rem 0;
+    align-items: center;
+    padding: 0.8rem 0;
     border-bottom: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.summary-item:hover {
+    background-color: rgba(67, 97, 238, 0.03);
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 6px;
 }
 
 .summary-item:last-child {
@@ -206,77 +247,255 @@ body {
 
 .summary-item span {
     color: var(--text-light);
+    font-weight: 500;
 }
 
 .status-badge {
-    padding: 0.4rem 0.8rem;
+    padding: 0.5rem 1rem;
     border-radius: 50px;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 500;
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
+    transition: var(--transition);
 }
 
 .status-badge.pending {
-    background-color: rgba(248, 150, 30, 0.1);
+    background-color: rgba(248, 150, 30, 0.15);
     color: #e67700;
 }
 
 .status-badge.confirmed {
-    background-color: rgba(76, 201, 240, 0.1);
+    background-color: rgba(76, 201, 240, 0.15);
     color: #0b7285;
 }
 
 /* PayPal Button */
 .paypal-button-wrapper {
-    padding: 0 1.5rem 1.5rem;
+    padding: 1.8rem 1.5rem;
+    background-color: #f9fafc;
+    border-top: 1px solid var(--border-color);
 }
 
 #paypal-button-container {
     width: 100%;
-    min-height: 50px;
-    margin-top: 1rem;
+    min-height: 55px;
+    margin-top: 0.5rem;
+    transition: var(--transition);
 }
 
 .paypal-button {
     width: 100% !important;
-    height: 50px !important;
-    border-radius: 8px !important;
+    height: 55px !important;
+    border-radius: 10px !important;
     background: #0070ba !important;
     transition: var(--transition) !important;
+    font-weight: 600 !important;
 }
 
 .paypal-button:hover {
     background: #005ea6 !important;
     transform: translateY(-2px) !important;
+    box-shadow: 0 5px 15px rgba(0, 112, 186, 0.3) !important;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
 }
 
 /* Responsive Design */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
     .payment-container {
-        padding: 0 0.75rem;
+        margin: 1.5rem auto;
+        padding: 0 0.8rem;
     }
     
     .payment-header {
-        padding: 1.2rem;
+        padding: 1.5rem 1.2rem;
+    }
+    
+    .payment-header h2 {
+        font-size: 1.4rem;
+    }
+    
+    .payment-alert {
+        padding: 1.1rem;
+        margin: 1rem;
+        flex-direction: column;
+        text-align: center;
+        gap: 0.8rem;
+    }
+    
+    .payment-alert > div {
+        text-align: center;
+    }
+    
+    .booking-summary {
+        padding: 1.5rem 1.2rem;
+    }
+    
+    .booking-summary h3 {
+        font-size: 1.2rem;
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .summary-item {
+        flex-direction: column;
+        gap: 0.3rem;
+        text-align: center;
+        padding: 0.9rem 0;
+    }
+    
+    .paypal-button-wrapper {
+        padding: 1.5rem 1.2rem;
+    }
+    
+    #paypal-button-container {
+        min-height: 50px;
+    }
+    
+    .paypal-button {
+        height: 50px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 15px 0;
+        font-size: 14px;
+    }
+    
+    .payment-container {
+        margin: 1rem auto;
+        padding: 0 0.5rem;
+    }
+    
+    .payment-header {
+        padding: 1.3rem 1rem;
+    }
+    
+    .payment-header i {
+        font-size: 1.8rem;
     }
     
     .payment-header h2 {
         font-size: 1.3rem;
     }
     
-    .booking-summary {
+    .payment-alert {
         padding: 1rem;
+        margin: 0.8rem;
+        border-radius: 8px;
+    }
+    
+    .payment-alert i {
+        font-size: 1.5rem;
+    }
+    
+    .payment-alert h4 {
+        font-size: 1.1rem;
+    }
+    
+    .booking-summary {
+        padding: 1.3rem 1rem;
+    }
+    
+    .booking-summary h3 {
+        font-size: 1.1rem;
+        margin-bottom: 1.2rem;
+    }
+    
+    .summary-grid {
+        gap: 0.8rem;
     }
     
     .summary-item {
-        flex-direction: column;
-        gap: 0.2rem;
+        padding: 0.7rem 0;
+    }
+    
+    .status-badge {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
     }
     
     .paypal-button-wrapper {
-        padding: 0 1rem 1rem;
+        padding: 1.3rem 1rem;
+    }
+    
+    #paypal-button-container {
+        min-height: 45px;
+    }
+    
+    .paypal-button {
+        height: 45px !important;
+        border-radius: 8px !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .payment-card {
+        border: 2px solid var(--primary);
+    }
+    
+    .summary-item {
+        border-bottom: 2px solid var(--border-color);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    html {
+        scroll-behavior: auto;
+    }
+    
+    .payment-card:hover {
+        transform: none;
+    }
+    
+    .summary-item:hover {
+        padding-left: 0;
+        padding-right: 0;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .payment-card {
+        background: #2a2a3a;
+        color: #f0f0f0;
+    }
+    
+    .booking-summary h3 {
+        color: #7c9cff;
+    }
+    
+    .summary-item span {
+        color: #a0a0b0;
+    }
+    
+    .paypal-button-wrapper {
+        background-color: #23232f;
+        border-top: 1px solid #3a3a4a;
+    }
+    
+    .summary-item {
+        border-bottom-color: #3a3a4a;
     }
 }
 </style>
