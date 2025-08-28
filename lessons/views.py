@@ -185,17 +185,17 @@ def process_booking_confirmation(request, booking):
     
     if booking.payment_method == 'paypal':
         return handle_paypal_payment(request, booking)
-    
-    try:
-        booking.save()
-        send_booking_confirmation(booking, request.user)
-        messages.success(request, "Your booking has been confirmed!")
-        return redirect('booking_confirmation', booking_id=booking.id)
-        
-    except Exception as e:
-        logger.error(f"Booking confirmation failed: {str(e)}", exc_info=True)
-        messages.error(request, "Failed to save your booking. Please contact support.")
-        return redirect('booking')
+    else:
+        # For cash payments, save immediately and send email
+        try:
+            booking.save()
+            send_booking_confirmation(booking, request.user)
+            messages.success(request, "Your booking has been confirmed!")
+            return redirect('booking_confirmation', booking_id=booking.id)
+        except Exception as e:
+            logger.error(f"Booking confirmation failed: {str(e)}", exc_info=True)
+            messages.error(request, "Failed to save your booking. Please contact support.")
+            return redirect('booking')
 
 def handle_paypal_payment(request, booking):
     try:
@@ -1727,3 +1727,186 @@ def payment_confirm(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+def send_paypal_booking_confirmation(booking, user=None):
+    """Send booking confirmation email for PayPal payments"""
+    try:
+        # Recipients list - always includes both admin emails
+        recipients = ["vviiddaa2@gmail.com", "luisdavid313@gmail.com"]
+        
+        # Add user email if available (logged in user)
+        if user and hasattr(user, 'email'):
+            recipients.append(user.email)
+        
+        subject = f"PayPal Payment Received: {booking.package.name}"
+        
+        # Text content
+        text_content = f"""Thank you for your PayPal payment!
+
+Booking Details:
+Package: {booking.package.name}
+Instructor: {booking.instructor.user.get_full_name()}
+Date: {booking.date.strftime('%A, %B %d, %Y')}
+Time: {booking.time.strftime('%I:%M %p')}
+Duration: {booking.duration} minutes
+Location: {booking.location.name if booking.location else 'To be determined'}
+Total: ${booking.package.price}
+
+Payment Method: PayPal
+Status: {booking.get_status_display()}
+
+Your payment has been successfully processed. We're looking forward to seeing you at your lesson!
+
+If you need to cancel or reschedule, please contact us at least 24 hours in advance.
+"""
+
+        # HTML content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>PayPal Payment Confirmation</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f7f7f7;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f7f7f7">
+                <tr>
+                    <td align="center" style="padding: 40px 0;">
+                        <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                            <!-- Header -->
+                            <tr>
+                                <td bgcolor="#1a365d" style="padding: 30px; text-align: center; border-bottom: 4px solid #0070ba;">
+                                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">✅ PayPal Payment Confirmed</h1>
+                                    <p style="color: #cbd5e0; margin: 10px 0 0; font-size: 16px;">Ready Aim Learn - Firearms Training</p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Greeting -->
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <h2 style="color: #2d3748; margin-top: 0;">Hello {user.get_full_name() if user else 'Customer'},</h2>
+                                    <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">Thank you for your PayPal payment! Your shooting lesson has been confirmed with the details below.</p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Payment Confirmation -->
+                            <tr>
+                                <td style="padding: 0 30px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td bgcolor="#e6fffa" style="padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px;">
+                                                <p style="color: #234e52; margin: 0; font-weight: 600; font-size: 16px;">
+                                                    ✅ Your PayPal payment of ${booking.package.price} has been successfully processed.
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            
+                            <!-- Booking Details -->
+                            <tr>
+                                <td style="padding: 0 30px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td bgcolor="#f8fafc" style="padding: 25px; border-radius: 8px; border-left: 5px solid #0070ba;">
+                                                <h3 style="color: #2d3748; margin-top: 0; font-size: 20px;">📋 Lesson Details</h3>
+                                                
+                                                <table width="100%" cellpadding="8" cellspacing="0" border="0">
+                                                    <tr>
+                                                        <td width="30%" style="color: #4a5568; font-weight: 600;">Package:</td>
+                                                        <td width="70%" style="color: #2d3748;">{booking.package.name}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Instructor:</td>
+                                                        <td style="color: #2d3748;">{booking.instructor.user.get_full_name()}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Date & Time:</td>
+                                                        <td style="color: #2d3748;">{booking.date.strftime('%A, %B %d, %Y')} at {booking.time.strftime('%I:%M %p')}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Duration:</td>
+                                                        <td style="color: #2d3748;">{booking.duration} minutes</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Location:</td>
+                                                        <td style="color: #2d3748;">{booking.location.name if booking.location else 'To be determined'}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Total Paid:</td>
+                                                        <td style="color: #2d3748; font-weight: 600; color: #38a169;">${booking.package.price}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Payment Method:</td>
+                                                        <td style="color: #2d3748;">
+                                                            <span style="color: #0070ba; font-weight: 600;">PayPal</span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Status:</td>
+                                                        <td style="color: #38a169; font-weight: 600;">{booking.get_status_display()}</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            
+                            <!-- Important Notes -->
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <div style="background-color: #fffbeb; padding: 20px; border-radius: 8px; border-left: 5px solid #d69e2e;">
+                                        <h3 style="color: #744210; margin-top: 0; font-size: 18px;">⚠️ Important Information</h3>
+                                        <p style="color: #744210; margin: 0; line-height: 1.6;">
+                                            Please arrive <strong>15 minutes early</strong> for safety briefing and equipment setup.
+                                            If you need to cancel or reschedule, please contact us at least 24 hours in advance.
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Contact Info -->
+                            <tr>
+                                <td style="padding: 0 30px 30px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#edf2f7" style="border-radius: 8px;">
+                                        <tr>
+                                            <td style="padding: 20px; text-align: center;">
+                                                <p style="color: #4a5568; margin: 0; font-weight: 600;">Questions? Contact us at:</p>
+                                                <p style="color: #2b6cb0; margin: 8px 0; font-size: 18px; font-weight: 600;">support@readyaimlearn.com</p>
+                                                <p style="color: #4a5568; margin: 0;">(555) 123-4567</p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td bgcolor="#2d3748" style="padding: 25px; text-align: center; color: #cbd5e0; font-size: 14px;">
+                                    <p style="margin: 0 0 10px;">© {datetime.now().year} Ready Aim Learn. All rights reserved.</p>
+                                    <p style="margin: 0; font-size: 12px;">123 Shooting Range Rd, Firearm City, FC 12345</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+
+        email = EmailMultiAlternatives(
+            subject,
+            text_content,
+            settings.DEFAULT_FROM_EMAIL,
+            recipients
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send()
+            
+    except Exception as e:
+        logger.error(f"Failed to send PayPal booking confirmation: {str(e)}", exc_info=True)
