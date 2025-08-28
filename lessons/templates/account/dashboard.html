@@ -586,6 +586,7 @@
                     </div>
                     
                     <ul class="sidebar-menu">
+                        <li><a href="{% url 'home' %}" {% if request.path == '/' %}class="active"{% endif %}><i class="fas fa-home"></i> Home</a></li>
                         <li><a href="{% url 'user_dashboard' %}" {% if request.path == '/dashboard/' %}class="active"{% endif %}><i class="fas fa-calendar-alt"></i> My Bookings</a></li>
                         <li><a href="{% url 'profile_settings' %}" {% if request.path == '/profile/settings/' %}class="active"{% endif %}><i class="fas fa-user"></i> Profile Settings</a></li>
                         <li><a href="{% url 'change_password' %}" {% if request.path == '/profile/change-password/' %}class="active"{% endif %}><i class="fas fa-lock"></i> Change Password</a></li>
