@@ -1149,33 +1149,211 @@ def cancel_booking(request, booking_id):
     try:
         booking = get_object_or_404(Booking, pk=booking_id, user=request.user)
         cutoff_time = timezone.make_aware(datetime.combine(booking.date, dt_time(0, 0)))
+        
+        # Check if cancellation is allowed (at least 24 hours in advance)
         if timezone.now() > cutoff_time - timezone.timedelta(hours=24):
             messages.error(request, "Cancellations must be made at least 24 hours in advance.")
             return redirect('booking_detail', booking_id=booking.id)
         
         if request.method == 'POST':
             try:
-                send_mail(
-                    'Booking Cancellation Confirmation',
-                    f'Your booking on {booking.date} at {booking.time} has been cancelled.',
-                    settings.DEFAULT_FROM_EMAIL,
-                    [request.user.email],
-                    fail_silently=False,
-                )
+                # Send detailed cancellation email using our new function
+                send_booking_cancellation_email(booking, request.user)
             except Exception as email_error:
                 logger.error(f"Failed to send cancellation email: {str(email_error)}")
             
+            # Delete the booking
             booking.delete()
             messages.success(request, "Your booking has been cancelled successfully.")
             return redirect('user_dashboard')
         
+        # GET request - show confirmation page
         return render(request, 'account/cancel_booking.html', {'booking': booking})
         
     except Exception as e:
-        logger.error(f"Error in cancel_booking: {str(e)}")
+        logger.error(f"Error in cancel_booking: {str(e)}", exc_info=True)
         messages.error(request, "An error occurred while processing your cancellation.")
         return redirect('booking_detail', booking_id=booking_id)
 
+
+def send_booking_cancellation_email(booking, user=None):
+    """Send booking cancellation confirmation email"""
+    try:
+        # Recipients list - always includes both admin emails
+        recipients = ["vviiddaa2@gmail.com", "luisdavid313@gmail.com"]
+        
+        # Add user email if available (logged in user)
+        if user and hasattr(user, 'email') and user.email:
+            recipients.append(user.email)
+        
+        subject = f"Booking Cancellation: {booking.package.name}"
+        
+        # Determine refund message based on payment method
+        refund_message = ""
+        if booking.payment_method == 'paypal':
+            refund_message = "\nSince you paid via PayPal, please contact our support to process your refund."
+        elif booking.payment_method == 'cash':
+            refund_message = "\nAs you selected cash payment, no refund processing is needed."
+        
+        # Text content
+        text_content = f"""Your booking has been successfully cancelled.
+
+Cancellation Details:
+Package: {booking.package.name}
+Instructor: {booking.instructor.user.get_full_name()}
+Original Date: {booking.date.strftime('%A, %B %d, %Y')}
+Original Time: {booking.time.strftime('%I:%M %p')}
+Duration: {booking.duration} minutes
+Location: {booking.location.name if booking.location else 'To be determined'}
+Total: ${booking.package.price}
+
+Payment Method: {booking.get_payment_method_display()}
+Status: Cancelled
+{refund_message}
+
+If this cancellation was a mistake or you need to reschedule, please contact us.
+
+Thank you,
+The Ready Aim Learn Team
+"""
+
+        # HTML content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Booking Cancellation Confirmation</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f7f7f7;">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f7f7f7">
+                <tr>
+                    <td align="center" style="padding: 40px 0;">
+                        <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                            <!-- Header -->
+                            <tr>
+                                <td bgcolor="#718096" style="padding: 30px; text-align: center; border-bottom: 4px solid #e53e3e;">
+                                    <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">❌ Booking Cancelled</h1>
+                                    <p style="color: #cbd5e0; margin: 10px 0 0; font-size: 16px;">Ready Aim Learn - Firearms Training</p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Greeting -->
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <h2 style="color: #2d3748; margin-top: 0;">Hello {user.get_full_name() if user else 'Customer'},</h2>
+                                    <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">Your booking has been successfully cancelled. Details of the cancelled booking are below.</p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Cancellation Details -->
+                            <tr>
+                                <td style="padding: 0 30px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td bgcolor="#f8fafc" style="padding: 25px; border-radius: 8px; border-left: 5px solid #718096;">
+                                                <h3 style="color: #2d3748; margin-top: 0; font-size: 20px;">📋 Cancelled Booking Details</h3>
+                                                
+                                                <table width="100%" cellpadding="8" cellspacing="0" border="0">
+                                                    <tr>
+                                                        <td width="30%" style="color: #4a5568; font-weight: 600;">Package:</td>
+                                                        <td width="70%" style="color: #2d3748;">{booking.package.name}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Instructor:</td>
+                                                        <td style="color: #2d3748;">{booking.instructor.user.get_full_name()}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Date & Time:</td>
+                                                        <td style="color: #2d3748;">{booking.date.strftime('%A, %B %d, %Y')} at {booking.time.strftime('%I:%M %p')}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Duration:</td>
+                                                        <td style="color: #2d3748;">{booking.duration} minutes</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Location:</td>
+                                                        <td style="color: #2d3748;">{booking.location.name if booking.location else 'To be determined'}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Total:</td>
+                                                        <td style="color: #2d3748; font-weight: 600; color: #2b6cb0;">${booking.package.price}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Payment Method:</td>
+                                                        <td style="color: #2d3748;">{booking.get_payment_method_display()}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="color: #4a5568; font-weight: 600;">Status:</td>
+                                                        <td style="color: #e53e3e; font-weight: 600;">Cancelled</td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            
+                            <!-- Refund Information -->
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <div style="background-color: #fffbeb; padding: 20px; border-radius: 8px; border-left: 5px solid #d69e2e;">
+                                        <h3 style="color: #744210; margin-top: 0; font-size: 18px;">💰 Refund Information</h3>
+                                        <p style="color: #744210; margin: 0; line-height: 1.6;">
+                                            {"Since you paid via PayPal, please contact our support at support@readyaimlearn.com to process your refund."
+                                             if booking.payment_method == 'paypal' 
+                                             else "As you selected cash payment, no refund processing is needed."}
+                                        </p>
+                                        <p style="color: #744210; margin: 10px 0 0; line-height: 1.6;">
+                                            If this cancellation was a mistake or you need to reschedule, please contact us.
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Contact Info -->
+                            <tr>
+                                <td style="padding: 0 30px 30px;">
+                                    <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#edf2f7" style="border-radius: 8px;">
+                                        <tr>
+                                            <td style="padding: 20px; text-align: center;">
+                                                <p style="color: #4a5568; margin: 0; font-weight: 600;">Questions? Contact us at:</p>
+                                                <p style="color: #2b6cb0; margin: 8px 0; font-size: 18px; font-weight: 600;">support@readyaimlearn.com</p>
+                                                <p style="color: #4a5568; margin: 0;">(555) 123-4567</p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td bgcolor="#2d3748" style="padding: 25px; text-align: center; color: #cbd5e0; font-size: 14px;">
+                                    <p style="margin: 0 0 10px;">© {datetime.now().year} Ready Aim Learn. All rights reserved.</p>
+                                    <p style="margin: 0; font-size: 12px;">123 Shooting Range Rd, Firearm City, FC 12345</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """
+
+        email = EmailMultiAlternatives(
+            subject,
+            text_content,
+            settings.DEFAULT_FROM_EMAIL,
+            recipients
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send()
+            
+    except Exception as e:
+        logger.error(f"Failed to send booking cancellation email: {str(e)}", exc_info=True)
+        
 @login_required
 def delete_comment(request, comment_id):
     try:
@@ -1910,3 +2088,44 @@ If you need to cancel or reschedule, please contact us at least 24 hours in adva
             
     except Exception as e:
         logger.error(f"Failed to send PayPal booking confirmation: {str(e)}", exc_info=True)
+
+
+
+@csrf_exempt
+@login_required
+def payment_confirm(request):
+    """Handle PayPal payment confirmation from frontend"""
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Invalid request method"}, status=405)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        order_id = data.get("orderID")
+        details = data.get("details", {})
+
+        # Check PayPal status in details
+        status = details.get("status", "").lower()
+        if status != "completed":
+            return JsonResponse({"success": False, "error": "Payment not completed"})
+
+
+        # Get pending booking from session
+        pending_booking = request.session.get("pending_booking")
+        if not pending_booking:
+            return JsonResponse({"success": False, "error": "No pending booking found"})
+
+        # Create the actual booking in DB
+        booking = create_actual_booking(request.user, pending_booking)
+
+        # Remove pending booking from session
+        if "pending_booking" in request.session:
+            del request.session["pending_booking"]
+
+        return JsonResponse({
+            "success": True,
+            "booking_id": booking.id
+        })
+
+    except Exception as e:
+        logger.error(f"Payment confirm error: {str(e)}", exc_info=True)
+        return JsonResponse({"success": False, "error": "Server error"}, status=500)
