@@ -502,81 +502,86 @@ body {
 
 <!-- PayPal Integration -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const PAYPAL_CLIENT_ID = "{{ PAYPAL_CLIENT_ID }}";
-    
-    // Load PayPal SDK
-    const script = document.createElement('script');
-    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD`;
-    script.onload = initializePayPal;
-    document.head.appendChild(script);
-    
-    function initializePayPal() {
-        paypal.Buttons({
-            style: {
-                layout: 'vertical',
-                color: 'blue',
-                shape: 'rect',
-                label: 'paypal',
-                height: 48
-            },
-            createOrder: function(data, actions) {
-                return actions.order.create({
-                    purchase_units: [{
-                        amount: {
-                            value: '{{ package.price }}',
-                            currency_code: 'USD'
-                        },
-                        description: '{{ package.name }}'
-                    }]
-                });
-            },
-            onApprove: function(data, actions) {
-                // Show processing message
-                document.querySelector('.processing').style.display = 'flex';
-                
-                return actions.order.capture().then(function(details) {
-                    // Hide processing, show success
-                    document.querySelector('.processing').style.display = 'none';
-                    document.querySelector('.success').style.display = 'flex';
-                    
-                    // Update status badge
-                    const badge = document.querySelector('.status-badge');
-                    badge.className = 'status-badge confirmed';
-                    badge.innerHTML = '<i class="fas fa-check-circle"></i> Confirmed';
-                    
-                    // Send confirmation to backend
-                    fetch("/payment/confirm/", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRFToken": "{{ csrf_token }}"
-                        },
-                        body: JSON.stringify({
-                            orderID: data.orderID,
-                            payerID: data.payerID,
-                            details: details
-                        })
-                    })
-                    .then(res => res.json())
-                    .then(resp => {
-                        console.log("Booking created:", resp);
-                        setTimeout(function() {
-                            window.location.href = "/dashboard/";
-                        }, 3000);
-                    })
-                    .catch(err => {
-                        console.error("Booking save error:", err);
-                        alert("Your payment succeeded, but we couldn't save your booking. Please contact support.");
+    document.addEventListener('DOMContentLoaded', function() {
+        const PAYPAL_CLIENT_ID = "{{ PAYPAL_CLIENT_ID }}";
+        
+        // Load PayPal SDK
+        const script = document.createElement('script');
+        script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=USD`;
+        script.onload = initializePayPal;
+        document.head.appendChild(script);
+        
+        function initializePayPal() {
+            paypal.Buttons({
+                style: {
+                    layout: 'vertical',
+                    color: 'blue',
+                    shape: 'rect',
+                    label: 'paypal',
+                    height: 48
+                },
+                createOrder: function(data, actions) {
+                    return actions.order.create({
+                        purchase_units: [{
+                            amount: {
+                                value: '{{ package.price }}',
+                                currency_code: 'USD'
+                            },
+                            description: '{{ package.name }}'
+                        }]
                     });
-                });
-            },
-            onError: function(err) {
-                console.error('PayPal Error:', err);
-                alert('Payment failed. Please try again or contact support.');
-            }
-        }).render('#paypal-button-container');
-    }
-});
-</script>
+                },
+                onApprove: function(data, actions) {
+                    // Show processing message
+                    document.querySelector('.processing').style.display = 'flex';
+                    
+                    return actions.order.capture().then(function(details) {
+                        // Send confirmation to backend
+                        fetch("/payment/confirm/", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": "{{ csrf_token }}"
+                            },
+                            body: JSON.stringify({
+                                orderID: data.orderID,
+                                payerID: data.payerID,
+                                details: details
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(resp => {
+                            document.querySelector('.processing').style.display = 'none';
+                            
+                            if (resp.success) {
+                                // Show success UI only if backend confirms
+                                document.querySelector('.success').style.display = 'flex';
+                                
+                                const badge = document.querySelector('.status-badge');
+                                badge.className = 'status-badge confirmed';
+                                badge.innerHTML = '<i class="fas fa-check-circle"></i> Confirmed';
+                                
+                                setTimeout(function() {
+                                    window.location.href = "/dashboard/";
+                                }, 3000);
+                            } else {
+                                alert("Payment could not be confirmed. Please contact support.");
+                            }
+                        })
+                        .catch(err => {
+                            document.querySelector('.processing').style.display = 'none';
+                            console.error("Booking save error:", err);
+                            alert("Your payment succeeded, but we couldn't save your booking. Please contact support.");
+                        });
+                    });
+                },
+                onError: function(err) {
+                    console.error('PayPal Error:', err);
+                    alert('Payment failed. Please try again or contact support.');
+                }
+            }).render('#paypal-button-container');
+        }
+    });
+    </script>
+    
 {% endblock %}
