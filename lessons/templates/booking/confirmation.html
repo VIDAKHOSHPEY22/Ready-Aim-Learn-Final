@@ -1,3 +1,9 @@
+{% load static %}
+
+{% block extra_head %}
+<link rel="icon" href="{% static 'lessons/images/favicon.ico' %}" type="image/x-icon" />
+{% endblock %}
+
 {% block content %}
 <!-- Add this script for showing success alert when returning -->
 <script>
