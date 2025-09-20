@@ -64,55 +64,58 @@ HTML_TEMPLATE = """
 
 def send_email():
     try:
-        # Create message
+        # ساختن ایمیل
         msg = MIMEMultipart('alternative')
         msg['Subject'] = "🔫 Your Shooting Lesson Confirmation"
         msg['From'] = DEFAULT_FROM_EMAIL
         msg['To'] = ", ".join(RECIPIENTS)
-        
-        # Generate reference number
+
         ref_number = datetime.now().strftime("%Y%m%d%H%M")
         current_datetime = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
         current_year = datetime.now().year
-        
-        # Create email content
+
         text_content = f"""Shooting Lesson Confirmation
         -------------------------------
         Date/Time: {current_datetime}
         Instructor: Luis David
         Location: Premium Shooting Range
         Reference: SR-{ref_number}
-        
+
         Please arrive 15 minutes early.
         """
-        
+
         html_content = HTML_TEMPLATE.format(
             current_datetime=current_datetime,
             current_year=current_year,
             ref_number=ref_number
         )
-        
-        # Attach both text and HTML versions
-        part1 = MIMEText(text_content, 'plain')
-        part2 = MIMEText(html_content, 'html')
-        msg.attach(part1)
-        msg.attach(part2)
-        
-        # Send email
+
+        msg.attach(MIMEText(text_content, 'plain'))
+        msg.attach(MIMEText(html_content, 'html'))
+
+        # مرحله به مرحله دیباگ
+        print("🔎 Connecting to server...")
         context = ssl.create_default_context()
-        with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT) as server:
-            server.ehlo()
+        with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT, timeout=20) as server:
+            print("✅ Connected to host")
+
+            code, response = server.ehlo()
+            print(f"EHLO response: {code} {response.decode()}")
+
+            print("🔎 Starting TLS...")
             server.starttls(context=context)
-            server.ehlo()
+            code, response = server.ehlo()
+            print(f"EHLO after STARTTLS: {code} {response.decode()}")
+
+            print("🔎 Logging in...")
             server.login(EMAIL_USER, EMAIL_PASSWORD)
+            print("✅ Logged in successfully")
+
             server.sendmail(DEFAULT_FROM_EMAIL, RECIPIENTS, msg.as_string())
-        
-        print("✅ Email successfully sent to:")
-        for recipient in RECIPIENTS:
-            print(f"  → {recipient}")
-            
+            print("✅ Email successfully sent!")
+
     except Exception as e:
-        print(f"❌ Error sending email: {str(e)}")
+        print("❌ Error during email process:", repr(e))
 
 if __name__ == "__main__":
     print("\n" + "="*50)
