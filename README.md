@@ -2,7 +2,7 @@
 
 A Django-based web application designed to facilitate shooting training sessions.([GitHub][1])
 
-## Features
+## Features will change 
 
 * **User Authentication**: Secure login and registration system.
 * **Instructor Dashboard**: Manage and schedule training sessions.
